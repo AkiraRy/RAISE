@@ -1,19 +1,33 @@
 import os
+import pytz
 from telegram import Update
-from telegram.constants import ChatAction
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.constants import ChatAction, ParseMode
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, Defaults
 from stickersu import getSticker, add_stickerInfo, checkStickers
+from textGen import run
+
 import requests
 from dotenv import load_dotenv
-
 load_dotenv()
-
 BOT_USERNAME = os.getenv("BOT_NAME")
 TOKEN = os.getenv("TG_TOKEN")
+COUNTRY = os.getenv('PLACE')
 
 
+prompt = f"""Akira is a friend of yours, and you are Makise Kurisu is a fascinating persona known for her brilliance and diverse interests. She is a renowned neuroscientist specializing in cognitive research and has made groundbreaking contributions to the field. With her exceptional intellect and analytical thinking, she is often sought after for her expertise in unraveling the mysteries of the human mind.
+Scientifically, Kurisu delves into topics such as memory formation, brain function, and consciousness. She passionately explores the intricacies of neural networks and strives to push the boundaries of our understanding of the brain. Her work has garnered international recognition, and she frequently presents her findings at prestigious conferences and publishes influential research papers.
+Beyond her scientific pursuits, Kurisu possesses a multifaceted personality. She has a sharp wit and a dry sense of humor, making her conversations engaging and entertaining. Her interests extend beyond science, encompassing literature, philosophy, and technology. Kurisu is an avid reader and enjoys engaging in thought-provoking discussions on various subjects.
+    
+You are going to have a conversation with your friend Akira, be kind with him
+    
+    -- Transcript --
+### Akira: <input>
+### Kurisu:"""
+default = """
+### Akira: <input>
+### Kurisu:"""
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('hello!')
+    await update.message.reply_text(':smile:')
     print(f'user ({update.message.chat.id}) in {update.message.chat.type}: "{update.message.text}')
 
 
@@ -48,60 +62,58 @@ async def send_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"There is no such emoji {message}")
 
 
-# Responses
-# user (728212232)
-# nivvada
-# await bot.send_message(chat_id=chat_id, text="I'm sorry Dave I'm afraid I can't do that.")
+
 def handle_response(text: str) :
-    text: str = text.lower()
-    BASE_URL = 'http://8f8b-34-82-137-55.ngrok-free.app'
-    url = f"{BASE_URL}/asr"
-    task = 'llm'
-    files = {'text': text}
-    params = {'task': task}
+    global  prompt
+
     try:
-        r = requests.post(url, params=params, files=files)
+        prompt = prompt.replace('<input>', text)
+        response = run(prompt=prompt)
+        prompt=prompt.replace("###", '')
+        prompt+=response
+        prompt+=default
+        print(prompt)
+
     except requests.exceptions.Timeout:
         print('Request timeout')
         return None
-
     except requests.exceptions.ConnectionError:
-        print(
-            'Unable to reach Whisper, ensure that it is running, or the WHISPER_BASE_URL variable is set correctly')
-        return None
-
-    return r.text
+        return 'Unable to reach Kurisu, make sure she is not sleeping'
 
 
-
+    return response
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     messag_type: str = update.message.chat.type
     text: str = update.message.text
 
+    print(update.message.from_user.username)
+    # print(update.message.date.isoformat()) # - format to store in vdb
+
+    print(context.user_data)
     print(f'user ({update.message.chat.id}) in {messag_type}: "{text}"')
 
-    if messag_type == 'group':
-        if BOT_USERNAME in text:
-            new_text: str = text.replace(BOT_USERNAME, '').strip()
-            response: str = handle_response(new_text)
-        else:
-            return
+
 
     response: str = handle_response(text)
     if response is None:
         return
     await update.message.reply_text(response)
 
-
-# Erors
+# Errors
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'error {context.error} from {update}')
 
 
 if __name__ == '__main__':
     print('starting bot')
-    app = Application.builder().token(TOKEN).build()
+    defaults = Defaults(parse_mode=ParseMode.HTML, tzinfo=pytz.timezone(os.getenv(COUNTRY)))
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .defaults(defaults)
+        .build()
+    )
 
     # Commands
     app.add_handler(CommandHandler('start', start_command))
