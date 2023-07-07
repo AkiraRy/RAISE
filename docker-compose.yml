@@ -10,11 +10,11 @@ services:
     - --scheme
     - http
     image: semitechnologies/weaviate:1.19.8
+    volumes:
+        - weaviate:/var/lib/weaviate
     ports:
     - 8080:8080
     restart: on-failure:0
-    volumes:
-      - /var/weaviate:/var/lib/weaviate
     environment:
       TRANSFORMERS_INFERENCE_API: 'http://t2v-transformers:8080'
       QUERY_DEFAULTS_LIMIT: 25
@@ -34,4 +34,5 @@ services:
           devices:
           - capabilities: 
             - 'gpu'
-...
+volumes:
+  weaviate:

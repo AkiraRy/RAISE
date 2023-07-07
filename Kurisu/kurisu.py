@@ -55,7 +55,7 @@ class Kurisu:
             curr_total_tokens = self.count_tokens()
 
     async def memory_context(self, concept):
-        max_distance = 0.20
+        max_distance = 0.50
         where_filter = {
             "path": ["from"],
             "operator": "Equal",
@@ -80,15 +80,12 @@ class Kurisu:
             fetch from vectorDB
         """
         prompt = self.persona
-        prompt += '\n\nKurisu may use the context below to answer any question if it is related\n\n<|CONTEXT|>'
-        prompt+= '\n\nToday`s date is the <|DATETIME|>'
-        prompt+= '\n    -- Transcript --\n'
-
         fetchedMemories = await self.Remember()
         fetchedMemories.reverse()
         for memories in fetchedMemories:
             self.memory.append(memories)
             prompt+=f"{memories['from']}: {memories['message']}\n"
+        prompt+=f"""Akira: What would you message me if i were inactive for a couple hours ?\nKurisu: If you were inactive for a couple of hours, I might send you a quick text asking if everything was alright or if you needed any assistance.\n"""
         prompt+="""### Akira: <input>\n### Kurisu:"""
 
         if self.count_tokens() > self.token_limit:
@@ -104,6 +101,7 @@ class Kurisu:
             return  (
                 self.client.query
                 .get("MemoryK", ["from", 'message'])
+                .with_additional("id")
                 .with_sort(content)
                 .with_limit(max_shards)
                 .do()

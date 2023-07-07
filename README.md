@@ -16,3 +16,5 @@ Add Voice for the AI
 - Paste this url in .env to HOST
 - Start the bot.py
 - enjoy chatting with an AI in Telegram
+
+Or you can always try it in telegram [Raise](https://t.me/raise_samabot) but before using it dm me first
