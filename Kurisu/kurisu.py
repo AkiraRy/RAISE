@@ -85,7 +85,6 @@ class Kurisu:
         for memories in fetchedMemories:
             self.memory.append(memories)
             prompt+=f"{memories['from']}: {memories['message']}\n"
-        prompt+=f"""Akira: What would you message me if i were inactive for a couple hours ?\nKurisu: If you were inactive for a couple of hours, I might send you a quick text asking if everything was alright or if you needed any assistance.\n"""
         prompt+="""### Akira: <input>\n### Kurisu:"""
 
         if self.count_tokens() > self.token_limit:
@@ -101,7 +100,6 @@ class Kurisu:
             return  (
                 self.client.query
                 .get("MemoryK", ["from", 'message'])
-                .with_additional("id")
                 .with_sort(content)
                 .with_limit(max_shards)
                 .do()

@@ -1,14 +1,12 @@
 import os
 import sys
-from collections import deque
-import threading
 import time
 from datetime import datetime
-
 from Kurisu.kurisu import Kurisu
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytz
 import emoji
+import random
 from telegram import Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.ext import (Application,
@@ -24,7 +22,7 @@ from stickersu import getSticker, add_stickerInfo, checkStickers
 from textGen import run
 import requests
 from dotenv import load_dotenv
-from collections import deque
+from transformers import pipeline
 load_dotenv()
 
 BOT_USERNAME = os.getenv("BOT_NAME")
@@ -32,10 +30,21 @@ TOKEN = os.getenv("TG_TOKEN")
 COUNTRY : str= os.getenv('PLACE')
 CREATOR_ID  = int(os.getenv('CREATOR_ID'))
 CREATOR_USERNAME = os.getenv('CREATOR_USERNAME')
-
+classifier = pipeline('sentiment-analysis', model='SamLowe/roberta-base-go_emotions')
 kurisu = Kurisu([{}])
 chat_queue: list= []
+feelings_dict: dict = {}
 
+def load_stickers():
+    with open('new_stickers.txt', 'r', encoding='utf-8') as file:
+        for line in file:
+            list_properties= line.split(',')
+            file_id = list_properties[1]
+            feelings = list_properties[0].strip('[]').split('|')
+
+            for feeling in feelings:
+                feelings_dict.setdefault(feeling, []).append(file_id)
+load_stickers()
 
 async def whitelist_user(update: Update, context: ContextTypes.DEFAULT_TYPE ):
     if update.effective_chat.id != CREATOR_ID or update.message.chat.type != 'private':
@@ -45,6 +54,7 @@ async def whitelist_user(update: Update, context: ContextTypes.DEFAULT_TYPE ):
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(':smile:')
     print(f'user ({update.message.chat.id}) in {update.message.chat.type}: "{update.message.text}')
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('help')
@@ -76,6 +86,7 @@ async def send_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"There is no such emoji {message}")
 
 async def handle_response() :
+    print("\nStarted generating")
     prompt = await kurisu.fulfilingPrompt()
 
     try:
@@ -89,8 +100,6 @@ async def handle_response() :
             prompt = prompt.replace('<|CONTEXT|>', context)
         prompt = prompt.replace('<input>', text)
         response = run(prompt=prompt)
-
-        print(prompt)
         memory = [
             {
                 'name': user_name,
@@ -103,9 +112,9 @@ async def handle_response() :
                 'datetime': pytz.timezone(COUNTRY).localize(datetime.now()).isoformat(timespec="seconds")
             }
         ]
-        # await kurisu.add_memories(memory)
+        await kurisu.add_memories(memory)
         prompt+=response
-        print(prompt)
+        print(f"Generated response is worth of  {kurisu.count_tokens()} tokens")
 
         chat_queue.pop(0)
         return response
@@ -124,6 +133,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message: str = update.message.text
     datetimeU = update.message.date.isoformat() # - format datetime to store in vdb
 
+    sticker = update.message.sticker
     message = emoji.replace_emoji(message, replace='').strip()
     if not message: return
 
@@ -131,18 +141,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Wait a little bit, Kurisu is typing")
         return
     else :
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
         chat_queue.append({
             'from': CREATOR_USERNAME if CREATOR_ID == sender.id else f'{sender.full_name}',
             'message': message,
             'datetime': datetimeU
         })
 
-        response: str = await handle_response()
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+    response: str = await handle_response()
 
-        if response is None:
-            return
-        await update.message.reply_text(response)
+    if response is None:
+        return
+    await update.message.reply_text(response)
+    rand_value = random.random()
+    print(rand_value)
+    if rand_value < 0.45:
+        emotion, score = classifier(response)[0].values()
+        sticker_id =  random.choice(feelings_dict[emotion])
+        await context.bot.send_sticker(update.effective_chat.id, sticker=sticker_id)
+
+
 
 # Errors
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):

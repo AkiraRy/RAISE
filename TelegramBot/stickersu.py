@@ -12,8 +12,6 @@ async def getSticker(stickerPack_name, emoji):
 
         else:
             print("no emoji")
-            return None
-
     return None
 
 
