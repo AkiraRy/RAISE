@@ -17,3 +17,14 @@ vectorDB
 delete.txt
 raise(old).yml
 new_stickers.txt
+dockb
+*.wav
+raise(old).yml
+Backups
+*.index
+*.pth
+history_chat.json
+old_history.txt
+Vocal_remover
+dataset_prep.py
+m4a_to_wav.py

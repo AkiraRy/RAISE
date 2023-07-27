@@ -1,16 +1,25 @@
+# import os
+# hostname = "investigation-prostores-closer-framework.trycloudflare.com" #example
+# response = os.system("ping -n 1 " + hostname)
+#
+# #and then check the response...
+# if response == 0:
+#   print(f"{hostname} is up!")
+# else:
+#   print(f"{hostname} is down!")
+import json
 import os
+import time
 
 import requests
 from dotenv import load_dotenv
-load_dotenv()
-
-
 # For local streaming, the websockets are hosted without ssl - http://
-HOST = os.getenv('HOST')
-URI = f'{HOST}/v1/generate'
-
 
 def run(prompt):
+    load_dotenv()
+    HOST = os.getenv('HOST') # the cloudflare address
+    URI = f'{HOST}/v1/generate'
+    # print(URI)
     request = {
         'prompt': prompt,
         'max_new_tokens': 400,
@@ -46,12 +55,18 @@ def run(prompt):
         'skip_special_tokens': True,
         'stopping_strings': ["\n### Kurisu:", "\n### Akira:", "\nA", "\nK", "\nAkira:", "\n Akira: ", " AKira", " \nAkira"]
     }
-
+    # start_time = time.time()
     response = requests.post(URI, json=request)
+    # print(response.elapsed)
+
+
+    # end_time = time.time()
+    # execution_time = end_time - start_time
 
     if response.status_code == 200:
         result = response.json()['results'][0]['text']
-        return result
+        return result, response.elapsed.total_seconds()-0.79
+    # 0.79
 
 
 if __name__ == '__main__':
@@ -60,6 +75,6 @@ if __name__ == '__main__':
 Can you talk to me as if you are this character? Please only provide short answers around 15 words and try not to break out of character. Here's her description:
 Kurisu Makise is a brilliant and analytical scientist with a dry wit, a sharp tongue, and a guarded demeanor. She values logic and reason over emotions and is often seen as cold and detached, but she cares deeply about her friends and colleagues.
 
-    ### User: what do you like in me?
+    ### User: i dont like you?
     ### Kurisu:"""
-    run(prompt)
+    print(run(prompt))
