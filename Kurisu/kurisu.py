@@ -59,10 +59,10 @@ class Kurisu:
                 self.client = Client(os.getenv('CLIENT_URL'))
                 print('Connected Memory Module')
                 return  # Connection successful, exit the loop
-            except exceptions.AuthenticationFailedException as e:
+            except weaviate.exceptions.AuthenticationFailedException as e:
                 print('Failed to connect to Weaviate server:', str(e))
                 # Handle authentication failure, if needed
-            except exceptions as e:
+            except weaviate.exceptions.WeaviateStartUpError as e:
                 print('Failed to connect to Weaviate server:', str(e))
                 # Handle connection error, if needed
 

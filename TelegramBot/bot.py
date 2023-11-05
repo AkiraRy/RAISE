@@ -1,10 +1,11 @@
 import os
 import sys
-import weaviate
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from pathlib import Path
 import time
 from datetime import datetime
+
+import weaviate
+
 from koe.stt import transcribe
 from Kurisu.kurisu import Kurisu
 import pytz
@@ -21,14 +22,16 @@ from telegram.ext import (Application,
                           ContextTypes,
                           Defaults,
                           ApplicationHandlerStop,
-                          TypeHandler)
+                          TypeHandler,
+                          )
 from TelegramBot.stickersu import getSticker, add_stickerInfo, checkStickers
 from TelegramBot.textGen import run
 import requests
 import re
-from dotenv import load_dotenv
 from transformers import pipeline
+from dotenv import load_dotenv
 load_dotenv()
+
 
 # Sys Variables
 MAIN_PATH = Path(__file__).resolve().parent
@@ -43,10 +46,12 @@ loop = None
 if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+
 def bind(function):
     global bot
     if bot is not None:
         bot.set_function = function
+
 
 def load_stickers():
     """
@@ -65,6 +70,9 @@ def load_stickers():
 
 
 def save_load_stickers():
+    if not STICKERS_PATH:
+        print('Could not successfully load sticker')
+        return
     try:
         load_stickers()
     except IOError:
@@ -76,22 +84,35 @@ save_load_stickers()
 
 class MyBot:
     def __init__(self):
-
+        # env values
         self.BOT_USERNAME = os.getenv("BOT_NAME")
         self.NICKNAME = os.getenv('BOT_NICKNAME')
         self.CREATOR_ID = int(os.getenv('CREATOR_ID'))
         self.CREATOR_USERNAME = os.getenv('CREATOR_USERNAME')
-        self.classifier = pipeline('sentiment-analysis', model='SamLowe/roberta-base-go_emotions')
         self.AUDIO_DIR = Path(os.getenv('AUDIO_DIR'))
         self.VOICE_FILE = os.getenv('VOICE_FILE')
+
+        # Kurisu
+        self.classifier = pipeline('sentiment-analysis', model='SamLowe/roberta-base-go_emotions')
         self.kurisu = None
         self.chat_queue: list = []
         self.function = None
         self.activate_kurisu()
 
+        # PARAMETERS TO CONTROL FUNCTIONALITY
+        # By default they all will be true and can be changed in gui
+
+        self.VOICE = True  # enables voice from bot
+        self.STICKERS = True  # enables stickers sending from bot
+        self.WHISPER = True  # enables transcribing of user voice
+        self.REMEMBER = False  # enables memory to db
+
+        self.app = None
+
+    # RENAME IT TO LABEL INFO or something similar
     def set_function(self, function):
-        if self.function is None:
-            self.function = function
+        self.function = None
+        self.function = function
 
     def activate_kurisu(self):
         if self.kurisu is not None:
@@ -152,26 +173,26 @@ class MyBot:
         curr = datetime.fromisoformat(date)
         formatted_datetime = curr.strftime("%d %B %Y, %I:%M%p, %A")  # Timestamp for prompt
         prompt = prompt.replace('<|DATETIME|>', formatted_datetime)
-        # ctx = await self.kurisu.memory_context(text)
 
+        # ctx = await self.kurisu.memory_context(text)
         # if ctx is not None:
         #     context = '\n'.join([f"{elems['from']}: {elems['message']}" for elems in ctx])
         #     prompt = prompt.replace('<|CONTEXT|>', context)
-        
+
         prompt = prompt.replace('<input>', text)
         # prompt += f"""\n### {user_name}: {text}\n### Kurisu:"""
 
         # print(prompt)
         try:
-            response, time = run(prompt=prompt)
+            response, timeR = run(prompt=prompt)
         except requests.exceptions.ConnectionError:
             print('Unable to reach Kurisu, make sure she is not sleeping')
             return None
         context = self.kurisu.count_tokens()
-        print(f'time: {time}, respnse: {response}, context: {context}')
+        print(f'time: {timeR}, response: {response}, context: {context}')
         if self.function is not None:
             print('self function')
-            self.function(time, context)
+            self.function(timeR, context)
         response = response.strip()
 
         memory = [
@@ -186,16 +207,17 @@ class MyBot:
                 'datetime': pytz.timezone(COUNTRY).localize(datetime.now()).isoformat(timespec="seconds")
             }
         ]
-
-        # try:
-        #     await self.kurisu.add_memories(memory[0])  #User
-        #     await self.kurisu.add_memories(memory[1])  #Kurisu
-        # except weaviate.SchemaValidationException:
-        #     print('Could Not add memories successfully')
+        if self.REMEMBER:
+            try:
+                await self.kurisu.add_memories(memory[0])  #User
+                await self.kurisu.add_memories(memory[1])  #Kurisu
+            except weaviate.SchemaValidationException:
+                print('Could Not add memories successfully')
 
         prompt += response
         self.chat_queue.pop(0)
-        print(f"Generated response is worth of  {self.kurisu.count_tokens()} tokens")
+        print(prompt)
+        print(f"Generated response is worth of {self.kurisu.count_tokens()} tokens in {timeR} seconds")
         return response
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -208,7 +230,7 @@ class MyBot:
 
         if not message:
             return
-        
+
         print(sender.full_name)
 
         if len(self.chat_queue) > 0:
@@ -226,16 +248,23 @@ class MyBot:
 
         if response is None:
             return
-
+        print(response)
         await update.message.reply_text(response)
         rand_value = random.random()
         print(rand_value)
+
+        if not self.STICKERS:
+            return
+
         if rand_value < 0.47:
             emotion, score = self.classifier(response)[0].values()
             sticker_id = random.choice(feelings_dict[emotion])
             await context.bot.send_sticker(update.effective_chat.id, sticker=sticker_id)
 
     async def handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not self.WHISPER:
+            return
+
         print('Got the users voice')
 
         sender = update.message.from_user
@@ -298,6 +327,8 @@ class MyBot:
     # Errors
     async def error(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f'error {context.error} from {update}')
+
+
 bot_ready_event = threading.Event()
 
 
@@ -308,33 +339,32 @@ def start_bot():
     print('starting bot')
     bot = MyBot()
     defaults = Defaults(parse_mode=ParseMode.HTML, tzinfo=pytz.timezone(COUNTRY))
-    app = (
+    bot.app = (
         Application.builder()
         .token(TOKEN)
         .defaults(defaults)
         .build()
     )
     filter_users = TypeHandler(Update, bot.whitelist_user)
-    app.add_handler(filter_users, -1)
-
+    bot.app.add_handler(filter_users, -1)
     # Commands
-    app.add_handler(CommandHandler('start', bot.start_command))
-    app.add_handler(CommandHandler('help', bot.help_command))
-    app.add_handler(CommandHandler('sticker', bot.send_sticker))
+    bot.app.add_handler(CommandHandler('start', bot.start_command))
+    bot.app.add_handler(CommandHandler('help', bot.help_command))
+    bot.app.add_handler(CommandHandler('sticker', bot.send_sticker))
 
     # Messages
-    app.add_handler(MessageHandler(filters.TEXT, bot.handle_message))
-    app.add_handler(MessageHandler(filters.VOICE, bot.handle_voice))
+    bot.app.add_handler(MessageHandler(filters.TEXT, bot.handle_message))
+    bot.app.add_handler(MessageHandler(filters.VOICE, bot.handle_voice))
 
     # Error
-    app.add_error_handler(bot.error)
+    bot.app.add_error_handler(bot.error)
     user_states = {}
-    app.context_types.context.user_states = user_states
+    bot.app.context_types.context.user_states = user_states
 
     print('pooling')
     bot_ready_event.set()
     try:
-        loop.run_until_complete(app.run_polling(drop_pending_updates=True))
+        loop.run_until_complete(bot.app.run_polling(drop_pending_updates=True))
     except RuntimeError as e:
         if str(e) == 'Event loop is closed':
             print('Bot stopped gracefully')
@@ -348,6 +378,7 @@ def stop_bot():
     global loop, bot
     if loop is None or bot is None:
         return
+
 
     # noinspection PyUnresolvedReferences
     bot.kurisu.nullify()
@@ -371,7 +402,7 @@ def run_ai():
 
 
 if __name__ == '__main__':
-    start_bot()
+    run_ai()
     # mybot = MyBot()
     # print('starting bot')
     # defaults = Defaults(parse_mode=ParseMode.HTML, tzinfo=pytz.timezone(COUNTRY))
