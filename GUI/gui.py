@@ -1,8 +1,10 @@
 import asyncio
+import logging
 import tkinter
 import dotenv
 import customtkinter
 import os
+import argparse
 from PIL import Image
 from tkinter import END
 import sys
@@ -14,8 +16,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from TelegramBot.bot import stop_bot, run_ai, bind
 from Modules.errors import ErrorType, handle_error
 load_dotenv()
-customtkinter.set_default_color_theme(os.path.abspath(os.getenv('THEME_PATH')))
 
+# maybe add parent.absolute() to check if it is RAISE if not go down and then add
+theme_path = Path.cwd().parent.absolute() / 'GUI' / os.getenv('THEME_PATH')
+
+if theme_path.exists():
+    customtkinter.set_default_color_theme(theme_path)
+else:
+    logging.error('Couldn`t load theme for GUI')
 """
 #TODO
 MAKE LINK VALIDATION OF LLM HOST
@@ -177,12 +185,14 @@ class MainFrame(customtkinter.CTkFrame):
             command=self.remember_switch)
         self.remember_cb.grid(row=4, column=0,pady=12)
 
+    # maybe make like switch? so that i wont use that much space for functions
     def voice_swtich(self):
         print(f"voice {self.voice_cb.get()}")
         global app
         if app.ai is None:
             return
         app.ai.VOICE = self.voice_cb.get()
+
 
     def stickers_swtich(self):
         print(f"stickers {self.stickers_cb.get()}")
@@ -192,6 +202,7 @@ class MainFrame(customtkinter.CTkFrame):
             return
         app.ai.STICKERS = self.stickers_cb.get()
 
+
     def whisper_swtich(self):
         print(f"whisper {self.whisper_cb.get()}")
 
@@ -199,6 +210,7 @@ class MainFrame(customtkinter.CTkFrame):
         if app.ai is None:
             return
         app.ai.WHISPER = self.whisper_cb.get()
+
 
     def remember_switch(self):
         print(f"remember {self.remember_cb.get()}")
@@ -572,7 +584,15 @@ class App(customtkinter.CTk):
 
 if __name__ == "__main__":
 
-    # start_docker_compose()
+    parser = argparse.ArgumentParser(description='Starts gui for AI chatbot interference')
+
+    parser.add_argument("-d", "--docker", help="enables only docker component",
+                        action="store_true")
+    args = parser.parse_args()
+    if args.docker:
+        start_docker_compose()
+        sys.exit(0)
+
     app = App()
 
     app.loop = asyncio.get_event_loop()  # Save the event loop

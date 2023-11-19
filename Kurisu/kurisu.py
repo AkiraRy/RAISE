@@ -10,7 +10,7 @@ load_dotenv()
 tokenizer_dir = Path(__file__).resolve().parent / 'tokenizer_files'
 TOKENIZER = AutoTokenizer.from_pretrained(str(tokenizer_dir))
 CREATOR_USERNAME = os.getenv('CREATOR_USERNAME')
-MAIN_FOLDER_PATH = Path(os.getenv('MAIN_FOLDER_PATH'))
+MAIN_FOLDER_PATH = Path.cwd().parent.absolute()
 
 
 class Kurisu:
@@ -30,10 +30,13 @@ class Kurisu:
         # IN PRODUCTION
         self.func = function
 
-    def __init__(self, memory, token_limit=1600):
+    def __init__(self, memory=None, token_limit=1600):
+
         if self._initialized:
             return
         self._initialized = True
+        if memory is None:
+            memory = [{}]
         assert isinstance(memory, list) and all(
             isinstance(item, dict) for item in memory), "'memory' parameter must be a list of dictionaries."
 

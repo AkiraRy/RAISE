@@ -1,11 +1,10 @@
+import logging
 import os
 import sys
 from pathlib import Path
 import time
 from datetime import datetime
-
 import weaviate
-
 from koe.stt import transcribe
 from Kurisu.kurisu import Kurisu
 import pytz
@@ -37,16 +36,19 @@ load_dotenv()
 MAIN_PATH = Path(__file__).resolve().parent
 TOKEN = os.getenv("TG_TOKEN")
 COUNTRY: str = os.getenv('PLACE')
-STICKERS_PATH = os.getenv('STICKERS', False)
+STICKERS_PATH = Path.cwd().parent.absolute() / 'TelegramBot' / os.getenv('STICKERS')
 bot = None
 feelings_dict: dict = {}
 loop = None
+
+# STICKERS_PATH = os.getenv('STICKERS', False)
 
 # To fix asyncio policy on windows
 if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
+# used in gui
 def bind(function):
     global bot
     if bot is not None:
@@ -55,7 +57,7 @@ def bind(function):
 
 def load_stickers():
     """
-    In style like:
+    format:
     [emotion|..|emotion2],sticker_id_from_telegram, name_of_sticker_pack
 
     """
@@ -71,12 +73,12 @@ def load_stickers():
 
 def save_load_stickers():
     if not STICKERS_PATH:
-        print('Could not successfully load sticker')
+        logging.error("path to sticker is null, couldn't load stickers")
         return
     try:
         load_stickers()
     except IOError:
-        print('Could not successfully load sticker')
+        logging.error("Couldn't load stickers from file")
 
 
 save_load_stickers()
@@ -92,7 +94,7 @@ class MyBot:
         self.AUDIO_DIR = Path(os.getenv('AUDIO_DIR'))
         self.VOICE_FILE = os.getenv('VOICE_FILE')
 
-        # Kurisu
+        # Kurisu(Brain)
         self.classifier = pipeline('sentiment-analysis', model='SamLowe/roberta-base-go_emotions')
         self.kurisu = None
         self.chat_queue: list = []
@@ -107,6 +109,7 @@ class MyBot:
         self.WHISPER = True  # enables transcribing of user voice
         self.REMEMBER = False  # enables memory to db
 
+        # Telegram instance
         self.app = None
 
     # RENAME IT TO LABEL INFO or something similar
@@ -117,8 +120,11 @@ class MyBot:
     def activate_kurisu(self):
         if self.kurisu is not None:
             return
+        try:
+            self.kurisu = Kurisu()
+        except:
+            logging.critical('Unable to reach Kurisu, make sure she is not sleeping')
 
-        self.kurisu = Kurisu([{}])
 
     async def whitelist_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.effective_chat.id != self.CREATOR_ID or update.message.chat.type != 'private':
@@ -126,6 +132,8 @@ class MyBot:
             raise ApplicationHandlerStop
 
     # Not sure if i still need that command
+    # maybe host later this telegram bot as separate instance in cloud or rpi
+    # so that it cant start a container with llm -gui
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(':smile:')
         print(f'user ({update.message.chat.id}) in {update.message.chat.type}: "{update.message.text}')
@@ -160,20 +168,18 @@ class MyBot:
             await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
             await update.message.reply_text(f"There is no such emoji {message}")
 
-    async def handle_response(self):
-        if len(self.chat_queue) < 1:
-            return None
-        print("\nStarted generating")
-
-        # Preparing prompt
+    async def prompt_completion(self):
         prompt = await self.kurisu.fulfilling_prompt()
+
         user_name = self.chat_queue[0]['from']
         text = self.chat_queue[0]['message']
         date = self.chat_queue[0]['datetime']
+
         curr = datetime.fromisoformat(date)
         formatted_datetime = curr.strftime("%d %B %Y, %I:%M%p, %A")  # Timestamp for prompt
         prompt = prompt.replace('<|DATETIME|>', formatted_datetime)
 
+        # for memory context under the construction
         # ctx = await self.kurisu.memory_context(text)
         # if ctx is not None:
         #     context = '\n'.join([f"{elems['from']}: {elems['message']}" for elems in ctx])
@@ -181,18 +187,33 @@ class MyBot:
 
         prompt = prompt.replace('<input>', text)
         # prompt += f"""\n### {user_name}: {text}\n### Kurisu:"""
+        # logging.info(prompt) before answer from ai
+        return user_name, text, date, prompt
 
-        # print(prompt)
+    # continue tomorrow
+    async def handle_response(self):
+        if len(self.chat_queue) < 1:
+            return None
+
+        logging.info('Started generating response to user')
+
+        # Preparing prompt
+        user_name, text, date, prompt = self.prompt_completion()
+
         try:
             response, timeR = run(prompt=prompt)
         except requests.exceptions.ConnectionError:
-            print('Unable to reach Kurisu, make sure she is not sleeping')
+            logging.critical('Unable to reach Kurisu, make sure she is not sleeping')
             return None
+
         context = self.kurisu.count_tokens()
-        print(f'time: {timeR}, response: {response}, context: {context}')
+
+        # print(f'time: {timeR}, response: {response}, context: {context}')
+        logging.info(f'time: {timeR}, response: {response}, context: {context}')
         if self.function is not None:
             print('self function')
             self.function(timeR, context)
+
         response = response.strip()
 
         memory = [
@@ -209,15 +230,16 @@ class MyBot:
         ]
         if self.REMEMBER:
             try:
-                await self.kurisu.add_memories(memory[0])  #User
-                await self.kurisu.add_memories(memory[1])  #Kurisu
+                await self.kurisu.add_memories(memory[0])  # User
+                await self.kurisu.add_memories(memory[1])  # Kurisu
             except weaviate.SchemaValidationException:
-                print('Could Not add memories successfully')
+                logging.error('Could Not add memories successfully')
+                # print('Could Not add memories successfully')
 
         prompt += response
         self.chat_queue.pop(0)
-        print(prompt)
-        print(f"Generated response is worth of {self.kurisu.count_tokens()} tokens in {timeR} seconds")
+        logging.info(prompt)
+        logging.info(f"Generated response is worth of {self.kurisu.count_tokens()} tokens in {timeR} seconds")
         return response
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -379,7 +401,6 @@ def stop_bot():
     if loop is None or bot is None:
         return
 
-
     # noinspection PyUnresolvedReferences
     bot.kurisu.nullify()
     bot = None
@@ -397,41 +418,15 @@ def run_ai():
     print(bot)
 
     time.sleep(1)
+
     print('\nStarted thread with bot telegram')
     return bot
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     run_ai()
-    # mybot = MyBot()
-    # print('starting bot')
-    # defaults = Defaults(parse_mode=ParseMode.HTML, tzinfo=pytz.timezone(COUNTRY))
-    # app = (
-    #     Application.builder()
-    #     .token(TOKEN)
-    #     .defaults(defaults)
-    #     .build()
-    # )
-    # filter_users = TypeHandler(Update, mybot.whitelist_user)
-    # app.add_handler(filter_users, -1)
-    #
-    # # Commands
-    # app.add_handler(CommandHandler('start', mybot.start_command))
-    # app.add_handler(CommandHandler('help', mybot.help_command))
-    # app.add_handler(CommandHandler('sticker', mybot.send_sticker))
-    #
-    # # Messages
-    # app.add_handler(MessageHandler(filters.TEXT, mybot.handle_message))
-    # app.add_handler(MessageHandler(filters.VOICE, mybot.handle_voice))
-    #
-    # # Error
-    # app.add_error_handler(mybot.error)
-    # user_states = {}
-    # app.context_types.context.user_states = user_states
-    #
-    # # chat_queue_thread = threading.Thread(target=process_chat_queue)
-    # # chat_queue_thread.start()
-    # print('pooling')
-    # app.run_polling(drop_pending_updates=True)
-    # polling_thread = threading.Thread(target=gui)
-    # polling_thread.start()
