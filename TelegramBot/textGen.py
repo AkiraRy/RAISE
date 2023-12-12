@@ -18,11 +18,13 @@ from dotenv import load_dotenv
 def run(prompt):
     load_dotenv()
     HOST = os.getenv('HOST') # the cloudflare address
-    URI = f'{HOST}/v1/generate'
+    URI = f'{HOST}/v1/completions' # should use chat completion, then history
+    # URI = f'{HOST}/v1/generate'
     # print(URI)
     request = {
         'prompt': prompt,
         'max_new_tokens': 1000,
+        # 'max_tokens': 1000,
 
         # Generation params. If 'preset' is set to different than 'None', the values
         # in presets/preset-name.yaml are used instead of the individual numbers.
@@ -49,11 +51,12 @@ def run(prompt):
         'mirostat_eta': 0.1,
         'stop_at_newline': False,
         'seed': -1,
-        'add_bos_token': True,
+        # 'add_bos_token': True,
+        'add_bos_token': False,
         'truncation_length': 2300,
-        'ban_eos_token': False,
+        'ban_eos_token': True,
         'skip_special_tokens': True,
-        'stopping_strings': ["\n### Kurisu:", "\n### Akira:", "\nA", "\nK", "\nAkira:", "\n Akira: ", " AKira", " \nAkira"]
+        'stop': ["\n### Akira:", "\nA", "\nK", "\nAkira:", "\n Akira: ", " AKira", " \nAkira"]
     }
     # start_time = time.time()
     response = requests.post(URI, json=request)
@@ -64,7 +67,8 @@ def run(prompt):
     # execution_time = end_time - start_time
 
     if response.status_code == 200:
-        result = response.json()['results'][0]['text']
+        # result = response.json()['results'][0]['text']
+        result = response.json()['choices'][0]['text']
         return result, response.elapsed.total_seconds()-0.79
     # 0.79
 
@@ -83,9 +87,7 @@ Some details about Makise Kurisu: Sex:Female, Birthdate: July 25th, 1992, BloodT
 
 Today`s date is the <|DATETIME|>
 
-Akira: Hey Kurisu can you say something scientific?
-ASSISTANT: Kurisu: Sure, here's a quote from Albert Einstein: "Imagination is more important than knowledge. Knowledge is limited. Imagination encircles the world."
-Akira: Hey Kurisu can you say something scientific?
+Akira: Hey Kurisu what is your favourite food?
 ASSISTANT: Kurisu:"""
 
 

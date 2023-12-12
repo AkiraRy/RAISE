@@ -198,8 +198,10 @@ class MyBot:
         logging.info('Started generating response to user')
 
         # Preparing prompt
-        user_name, text, date, prompt = self.prompt_completion()
-
+        user_name, text, date, prompt = await self.prompt_completion()
+        print("\n")
+        print(prompt)
+        print("\n")
         try:
             response, timeR = run(prompt=prompt)
         except requests.exceptions.ConnectionError:

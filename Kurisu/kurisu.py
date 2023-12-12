@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import weaviate
@@ -121,23 +122,24 @@ class Kurisu:
         """
         prompt = self.persona
 
-        try:
-            fetchedMemories = await self.remember()  # chat history
-        except exceptions:
-            print('Brain was damaged, could not remember anything')
-            return
-
-        fetchedMemories.reverse()  # chat order
-
-        for memories in fetchedMemories:
-            self.memory.append(memories)
-            prompt += f"{memories['from']}: {memories['message'].strip()}\n"
+        # try:
+        #     fetchedMemories = await self.remember()  # chat history
+        # except exceptions:
+        #     print('Brain was damaged, could not remember anything')
+        #     return
+        #
+        # fetchedMemories.reverse()  # chat order
+        #
+        # for memories in fetchedMemories:
+        #     self.memory.append(memories)
+        #     prompt += f"{memories['from']}: {memories['message'].strip()}\n"
         prompt += f"""{CREATOR_USERNAME}: <input>
-
 ASSISTANT: Kurisu:"""
 
         if self.count_tokens() > self.token_limit:
+
             self.forget()
+        print(self.count_tokens())
         return prompt
 
     async def remember(self, max_shards: int = 20):
