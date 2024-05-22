@@ -116,30 +116,39 @@ class Kurisu:
         except exceptions:
             return None
 
-    async def fulfilling_prompt(self):
+    async def fulfilling_prompt(self) -> list:
         """
             fetch from vectorDB
         """
-        prompt = self.persona
+        # prompt = self.persona # return as character context maybe not use it here?
+        prompt = []
+        try:
+            fetchedMemories = await self.remember()  # chat history
+        except exceptions:
+            print('Brain was damaged, could not remember anything')
+            return
 
-        # try:
-        #     fetchedMemories = await self.remember()  # chat history
-        # except exceptions:
-        #     print('Brain was damaged, could not remember anything')
-        #     return
-        #
-        # fetchedMemories.reverse()  # chat order
-        #
-        # for memories in fetchedMemories:
-        #     self.memory.append(memories)
-        #     prompt += f"{memories['from']}: {memories['message'].strip()}\n"
-        prompt += f"""{CREATOR_USERNAME}: <input>
-ASSISTANT: Kurisu:"""
+        fetchedMemories.reverse()  # chat order
+
+        for memories in fetchedMemories:
+            self.memory.append(memories)
+
+            if memories['from'] == CREATOR_USERNAME:
+                prompt.append({"role": "user", "content": memories['message'].strip()})
+            else :
+                prompt.append({"role": "assistant", "content": memories['message'].strip()})
+
+        # empty space for user input
+        prompt.append({"role": "user", "content": ''})
+
+            # prompt += f"{memories['from']}: {memories['message'].strip()}\n"
+        # prompt += f"""{CREATOR_USERNAME}: <input>
+# ASSISTANT: Kurisu:"""
 
         if self.count_tokens() > self.token_limit:
-
             self.forget()
-        print(self.count_tokens())
+
+        logging.info(f"current number of tokens is {self.count_tokens()}")
         return prompt
 
     async def remember(self, max_shards: int = 20):

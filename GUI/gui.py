@@ -12,7 +12,8 @@ import subprocess
 import time
 from pathlib import Path
 from dotenv import load_dotenv
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Plugins')))
+
 from TelegramBot.bot import stop_bot, run_ai, bind
 from Modules.errors import ErrorType, handle_error
 load_dotenv()
@@ -53,7 +54,7 @@ gcount = 0
 #         gcount += 1
 #         # CONTINUE FROM HERE
 
-
+# TRANSFER TO UTILITIES
 def update_env(key_name: str, value):
     dotenv_file = dotenv.find_dotenv()
     dotenv.load_dotenv(dotenv_file)
@@ -124,6 +125,17 @@ class ToplevelWindow(customtkinter.CTkToplevel):
 
 
 class MainFrame(customtkinter.CTkFrame):
+    def set_switches(self, switches):
+        if switches.get('VOICE', False):
+            self.voice_cb.toggle()
+        # if 'VOICE_CHANGE' in switches:
+        #     self.voice_cb.toggle()
+        if switches.get('STICKERS', False):
+            self.stickers_cb.toggle()
+        if switches.get('WHISPER', False):
+            self.whisper_cb.toggle()
+        if switches.get('REMEMBER', False):
+            self.remember_cb.toggle()
 
     def __init__(self, master, fg_color):
         super().__init__(master, fg_color=fg_color)
@@ -313,7 +325,6 @@ class MyFrame(customtkinter.CTkFrame):  # Rename to stats main frame probably or
         # create home frame
         self.home_frame = MainFrame(self, fg_color='transparent')
 
-
         # create second frame
         self.second_frame = SecondFrame(self, fg_color='transparent')
 
@@ -474,7 +485,7 @@ class App(customtkinter.CTk):
         # Login Frame
         self.login_frame = LoginFrame(self)
         self.login_frame.grid(row=0, column=0, sticky="ns", columnspan=2)
-        self.login_frame.host_checkbox.toggle()  # ADDED
+        self.login_frame.host_checkbox.toggle()
         self.login_frame.whisper_checkbox.toggle()
         self.bind('<Return>', lambda event: self.launch_event())
 
@@ -577,12 +588,25 @@ class App(customtkinter.CTk):
         # self.ai.set_function(bind_textgen_stats)
         BOT_STATE = True
 
+        switches = {
+            'VOICE': self.ai.VOICE,
+            'STICKERS': self.ai.STICKERS,
+            'WHISPER': self.ai.WHISPER,
+            'REMEMBER': self.ai.REMEMBER,
+        }
+
         self.login_frame.grid_forget()  # remove login frame
         self.main_frame.grid(row=0, column=0, sticky="nsew")  # show main frame
+        self.main_frame.home_frame.set_switches(switches)
         # bind(bind_textgen_stats)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     parser = argparse.ArgumentParser(description='Starts gui for AI chatbot interference')
 

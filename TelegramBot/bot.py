@@ -1,5 +1,7 @@
+import io
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 import time
@@ -8,11 +10,14 @@ import weaviate
 from koe.stt import transcribe
 from Kurisu.kurisu import Kurisu
 import pytz
+import soundfile as sf
 import emoji
+import json
 import random
 import threading
+from translate import Translator
 import asyncio
-from telegram import Update
+from telegram import Update, InputFile, Voice
 from telegram.constants import ChatAction, ParseMode
 from telegram.ext import (Application,
                           CommandHandler,
@@ -29,6 +34,8 @@ import requests
 import re
 from transformers import pipeline
 from dotenv import load_dotenv
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Plugins')))
+
 load_dotenv()
 
 
@@ -53,6 +60,14 @@ def bind(function):
     global bot
     if bot is not None:
         bot.set_function = function
+
+
+def translate_text(text, target_language, provider="mymemory"):
+    if provider == "google":
+        provider = "libre"
+    translator = Translator(provider=provider, from_lang="en", to_lang=target_language)
+    translation = translator.translate(text)
+    return translation
 
 
 def load_stickers():
@@ -81,6 +96,10 @@ def save_load_stickers():
         logging.error("Couldn't load stickers from file")
 
 
+def convert_wav_to_ogg(wav_path, output_ogg_path):
+    # Use FFmpeg to convert the WAV file to OGG with OPUS encoding
+    subprocess.run(['ffmpeg', '-i', wav_path, '-c:a', 'libopus', output_ogg_path])
+
 save_load_stickers()
 
 
@@ -100,17 +119,26 @@ class MyBot:
         self.chat_queue: list = []
         self.function = None
         self.activate_kurisu()
-
         # PARAMETERS TO CONTROL FUNCTIONALITY
         # By default they all will be true and can be changed in gui
 
         self.VOICE = True  # enables voice from bot
+        self.VOICE_CHANGE = True
         self.STICKERS = True  # enables stickers sending from bot
         self.WHISPER = True  # enables transcribing of user voice
         self.REMEMBER = False  # enables memory to db
 
         # Telegram instance
         self.app = None
+
+        # Voice Instances
+        self.voicevox = None
+        self.RVC = None
+        self.load_voicevox()
+
+    def load_voicevox(self):
+        from Plugins.voicevox import  VoicevoxTTSPlugin
+        self.voicevox= VoicevoxTTSPlugin()
 
     # RENAME IT TO LABEL INFO or something similar
     def set_function(self, function):
@@ -124,7 +152,7 @@ class MyBot:
             self.kurisu = Kurisu()
         except:
             logging.critical('Unable to reach Kurisu, make sure she is not sleeping')
-
+            sys.exit(0)
 
     async def whitelist_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.effective_chat.id != self.CREATOR_ID or update.message.chat.type != 'private':
@@ -168,16 +196,17 @@ class MyBot:
             await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
             await update.message.reply_text(f"There is no such emoji {message}")
 
-    async def prompt_completion(self):
+    async def prompt_completion(self) :
         prompt = await self.kurisu.fulfilling_prompt()
 
         user_name = self.chat_queue[0]['from']
         text = self.chat_queue[0]['message']
         date = self.chat_queue[0]['datetime']
 
+
         curr = datetime.fromisoformat(date)
         formatted_datetime = curr.strftime("%d %B %Y, %I:%M%p, %A")  # Timestamp for prompt
-        prompt = prompt.replace('<|DATETIME|>', formatted_datetime)
+        # prompt = prompt.replace('<|DATETIME|>', formatted_datetime)
 
         # for memory context under the construction
         # ctx = await self.kurisu.memory_context(text)
@@ -185,12 +214,12 @@ class MyBot:
         #     context = '\n'.join([f"{elems['from']}: {elems['message']}" for elems in ctx])
         #     prompt = prompt.replace('<|CONTEXT|>', context)
 
-        prompt = prompt.replace('<input>', text)
+        prompt[-1]["content"] = text
+
         # prompt += f"""\n### {user_name}: {text}\n### Kurisu:"""
         # logging.info(prompt) before answer from ai
-        return user_name, text, date, prompt
+        return user_name, text, date, self.kurisu.persona , prompt
 
-    # continue tomorrow
     async def handle_response(self):
         if len(self.chat_queue) < 1:
             return None
@@ -198,12 +227,12 @@ class MyBot:
         logging.info('Started generating response to user')
 
         # Preparing prompt
-        user_name, text, date, prompt = await self.prompt_completion()
+        user_name, text, date, character_context, prompt = await self.prompt_completion()
         print("\n")
-        print(prompt)
+        print(json.dumps(prompt, indent=2))
         print("\n")
         try:
-            response, timeR = run(prompt=prompt)
+            response, timeR = run(history=prompt, character_context=character_context)
         except requests.exceptions.ConnectionError:
             logging.critical('Unable to reach Kurisu, make sure she is not sleeping')
             return None
@@ -238,11 +267,30 @@ class MyBot:
                 logging.error('Could Not add memories successfully')
                 # print('Could Not add memories successfully')
 
-        prompt += response
+        prompt.append({"role": "assistant", "content": response.strip()})
         self.chat_queue.pop(0)
         logging.info(prompt)
         logging.info(f"Generated response is worth of {self.kurisu.count_tokens()} tokens in {timeR} seconds")
         return response
+
+
+
+    async def send_voice_binary(self, chat_id, context : ContextTypes.bot_data, binary_audio=None):
+        if binary_audio is None:
+            return
+
+        await context.bot.send_chat_action(chat_id=chat_id,  action=ChatAction.RECORD_VOICE)
+        await context.bot.send_voice(chat_id=chat_id, voice=binary_audio)
+
+
+    async def send_voice_path(self, chat_id, context):  # DO NOT TOUCH, FIX THIS
+        await context.bot.send_chat_action(chat_id=chat_id,  action=ChatAction.RECORD_VOICE)
+        # audio_path = 'Audio\\with_rvc.wav'
+        # ogg_path = 'Audio\\with_rvc.ogg'
+        # convert_wav_to_ogg(audio_path, ogg_path)
+
+        # with open(ogg_path, 'rb') as audio_file:
+        #     await context.bot.send_voice(chat_idq=chat_id, audio=audio_file)
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Sender`s data
@@ -251,9 +299,11 @@ class MyBot:
         print(message)
         datetimeU = update.message.date.isoformat()  # - format datetime to store in vdb
         message = emoji.replace_emoji(message, replace='').strip()
-
-        if not message:
-            return
+        # if message == 'voice':
+        #     await self.send_voice_binary(chat_id=update.message.chat_id, context=context)
+        #     return
+        # if not message:
+        #     return
 
         print(sender.full_name)
 
@@ -272,10 +322,28 @@ class MyBot:
 
         if response is None:
             return
-        print(response)
+        # print(response)
         await update.message.reply_text(response)
         rand_value = random.random()
         print(rand_value)
+
+
+        if self.VOICE and self.VOICE_CHANGE:
+            start_time = time.time()
+            response_in_jp = translate_text(response, 'ja')
+            bin_voice = self.voicevox.generate_tts(response_in_jp, rvc=True)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            logging.info(f"Time taken: {elapsed_time} seconds")
+            await self.send_voice_binary(update.message.chat_id, context, bin_voice)
+        elif self.VOICE:
+            start_time = time.time()
+            response_in_jp = translate_text(response, 'ja')
+            bin_voice = self.voicevox.generate_tts(response_in_jp)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            logging.info(f"Time taken: {elapsed_time} seconds")
+            await self.send_voice_binary(update.message.chat_id, context, bin_voice)
 
         if not self.STICKERS:
             return

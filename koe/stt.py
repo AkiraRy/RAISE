@@ -3,13 +3,13 @@ import time
 from dotenv import load_dotenv
 import requests
 from pathlib import Path
-
+import joblib
 
 load_dotenv()
 BASE_URL = os.getenv('WHISPER_BASE_URL')
 
 
-def transcribe(filepath):
+def transcribe(filepath): # MAKE IT TO SEND TEMPRORARY FILE WITHOUT DOWNLOADING TO DRIVE
     start_time = time.time()
     try:
         with open(filepath, 'rb') as infile:
