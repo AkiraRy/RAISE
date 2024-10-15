@@ -1,3 +1,5 @@
+import os
+
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
 import logging
@@ -34,3 +36,6 @@ async def handle_message(update: Update, context: CallbackContext):
     # This is where you can connect to the assistant core
     response = f"You said: {user_input}"
     await update.message.reply_text(response)
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pass
