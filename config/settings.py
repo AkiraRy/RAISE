@@ -12,12 +12,11 @@ from dataclasses import dataclass, asdict, field
 
 load_dotenv()
 
-TG_TOKEN = os.getenv('TG_TOKEN')
-
 BASE_DIR = Path(os.getcwd())
-PROFILES_DIR = BASE_DIR / "profiles"
+CONFIG_DIR = BASE_DIR / 'config'
+PROFILES_DIR = CONFIG_DIR / "profiles"
 DEFAULT_SETTINGS = PROFILES_DIR / "settings.yaml"
-
+LLM_SETTINGS = CONFIG_DIR / "llm_settings"
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -127,7 +126,7 @@ class WeaviateSettings(BaseSettings):
 
 
 @dataclass
-class PluginSettings:
+class PluginSettings:  # no idea currently how to add validation here.
     plugin_name: str
     plugin_config: Dict[str, str] = field(default_factory=dict)
 
@@ -141,11 +140,24 @@ class DiscordSettings(BaseSettings):
 
 
 @dataclass
+class LLMSettings(BaseSettings):
+    model: str
+    temperature: float
+    max_tokens: int
+    other_settings: Dict[str, str] = field(default_factory=dict)
+
+    def validate(self):
+        pass
+
+
+@dataclass
 class Config(BaseSettings):
     telegram: Optional[TelegramSettings] = None
     discord: Optional[DiscordSettings] = None
     weaviate: Optional[WeaviateSettings] = None
     plugins: Dict[str, PluginSettings] = field(default_factory=dict)
+    llm: Optional[LLMSettings] = None
+    llm_type: str = None
 
     def validate(self):
         if not self.weaviate:
@@ -181,8 +193,12 @@ class SettingsManager:
                 for name, settings in data['plugins'].items():
                     self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
 
+            self.config.llm_type = data.get('llm_type', 'default')
+            self.load_llm_settings()
             self.config.validate()
             print("Settings loaded successfully.")
+
+        return self
 
     def save_settings(self):
         all_settings = {}
@@ -194,10 +210,23 @@ class SettingsManager:
             all_settings['weaviate'] = asdict(self.config.weaviate)
 
         all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
+        all_settings['llm_type'] = self.config.llm_type
 
         with open(self.yaml_path, 'w') as f:
             yaml.dump(all_settings, f, default_flow_style=False)
             print("Settings saved successfully.")
+
+    def load_llm_settings(self):
+        llm_settings_path = LLM_SETTINGS / f"{self.config.llm_type}.yaml"
+        print(llm_settings_path)
+        if llm_settings_path.exists():
+            with open(llm_settings_path, 'r') as f:
+                llm_data = yaml.safe_load(f)
+                self.config.llm = LLMSettings(**llm_data)
+                self.config.llm.validate()
+                print(f"LLM settings for {self.config.llm_type} loaded successfully.")
+        else:
+            raise FileNotFoundError(f"LLM settings file '{self.config.llm_type}.yaml' not found in llm_settings.")
 
 
 def get_logger(name="bot"):
