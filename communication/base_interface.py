@@ -1,8 +1,6 @@
-import asyncio
 import threading
 from abc import ABC, abstractmethod
-import logging
-logger = logging.getLogger("bot")
+
 
 class BaseInterface(ABC):
     @abstractmethod

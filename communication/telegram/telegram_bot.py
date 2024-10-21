@@ -1,6 +1,5 @@
 import asyncio
 
-import pytz
 from .. import BaseInterface
 from telegram import Update, InputFile, Voice
 from telegram.constants import ChatAction, ParseMode
@@ -13,9 +12,11 @@ from telegram.ext import (Application,
                           ApplicationHandlerStop,
                           TypeHandler,
                           )
-import config.settings as settings
 from .handlers import handle_message, error, help_command, start_command, whitelist_user
 import logging
+from config.settings import TelegramSettings
+
+
 logger = logging.getLogger("bot")
 
 
@@ -32,33 +33,31 @@ class TelegramInterface(BaseInterface):
         ])
 
     async def tts(self, message: str):
+        # post/get to fastapi
         pass
 
     async def stt(self, intput: bytes):
+        # post/get to fastapi
         pass
 
     async def llm_interfere(self, message: str):
+        # post/get to fastapi
         pass
 
-    def __init__(self, token, config):
+    def __init__(self, token, config: TelegramSettings):
         # essential variables
-        self.CREATOR_ID = config.get("CREATOR_ID", None)
-        # self.CREATOR_USERNAME = config.get('CREATOR_USERNAME", None)
-        self.country = config.get("Country", "UTC")
+        self.CREATOR_ID = config.creator_id
+        self.CREATOR_USERNAME = config.creator_username
 
-        defaults = Defaults(parse_mode=ParseMode.HTML, tzinfo=pytz.timezone(self.country))
-        self.app: Application = Application.builder().token(token).defaults(defaults).build()
+        # defaults = Defaults(parse_mode=ParseMode.HTML, tzinfo=pytz.timezone(self.country))
+        # self.app: Application = Application.builder().token(token).defaults(defaults).build()
+        self.app: Application = Application.builder().token(token).build()
         self.app.context_types.context.bot_data = {
             "creator_id": self.CREATOR_ID,
-            "country": self.country,
         }
 
         # self.job_queue = self.app.job_queue
         # self.job_queue.run_repeating()
-
-    # def just_start_please(self):
-    #     self.initialize()
-    #     self.app.run_polling()
 
     def run(self):
         try:
