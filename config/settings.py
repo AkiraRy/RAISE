@@ -12,7 +12,7 @@ from dataclasses import dataclass, asdict, field
 
 load_dotenv()
 
-BASE_DIR = Path(os.getcwd())
+BASE_DIR = Path(__file__).parent.parent
 CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
 DEFAULT_SETTINGS = PROFILES_DIR / "settings.yaml"
