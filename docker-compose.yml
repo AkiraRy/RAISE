@@ -17,15 +17,11 @@ services:
     restart: on-failure:0
     environment:
       TRANSFORMERS_INFERENCE_API: 'http://t2v-transformers:8080'
-      QNA_INFERENCE_API: 'http://qna-transformers:8080'
-      IMAGE_INFERENCE_API: 'http://i2v-neural:8080'
-      NER_INFERENCE_API: 'http://ner-transformers:8080'
       SPELLCHECK_INFERENCE_API: 'http://text-spellcheck:8080'
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
       PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
       DEFAULT_VECTORIZER_MODULE: 'text2vec-transformers'
-#      ENABLE_MODULES: 'text2vec-transformers,qna-transformers,ner-transformers,text-spellcheck,img2vec-neural'
       ENABLE_MODULES: 'text2vec-transformers,text-spellcheck'
       CLUSTER_HOSTNAME: 'raise'
   t2v-transformers:
@@ -39,41 +35,8 @@ services:
           devices:
           - capabilities:
             - 'gpu'
-  qna-transformers:
-    image: cr.weaviate.io/semitechnologies/qna-transformers:distilbert-base-uncased-distilled-squad
-    environment:
-      ENABLE_CUDA: '1'
-      NVIDIA_VISIBLE_DEVICES: 'all'
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - capabilities:
-            - 'gpu'
-  ner-transformers:
-    image: cr.weaviate.io/semitechnologies/ner-transformers:dslim-bert-base-NER
-    environment:
-      ENABLE_CUDA: '1'
-      NVIDIA_VISIBLE_DEVICES: 'all'
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - capabilities:
-            - 'gpu'
   text-spellcheck:
     image: cr.weaviate.io/semitechnologies/text-spellcheck-model:pyspellchecker-en
-  i2v-neural:
-    image: cr.weaviate.io/semitechnologies/img2vec-pytorch:resnet50
-    environment:
-      ENABLE_CUDA: '1'
-      NVIDIA_VISIBLE_DEVICES: 'all'
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - capabilities:
-            - 'gpu'
   whisper:
     image: onerahmet/openai-whisper-asr-webservice:latest-gpu
     environment:
