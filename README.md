@@ -1,6 +1,3 @@
-Sure! Here's an updated version of the README with the additional information included:
-
----
 
 # RAISE
 
