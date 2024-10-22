@@ -131,7 +131,7 @@ class WeaviateSettings(BaseSettings):
         errors = []
         if not self.class_name:
             errors.append("Class name is required.")
-        if not (0 < self.port < 65536):
+        if not (0 < self.http_port < 65536):
             errors.append("Port must be a valid number between 1 and 65535.")
         if errors:
             raise ValueError(f"Validation errors in WeaviateSettings: {', '.join(errors)}")
@@ -229,6 +229,38 @@ class SettingsManager:
                 raise
 
         return self
+
+    def load_single_module(self, component):
+        if not self.yaml_path.exists():
+            logger.error(f"[SettingsManager/load_single_module] Yaml({self.yaml_path}) path doesn't exists")
+
+        try:
+            with open(self.yaml_path, 'r') as f:
+                data = yaml.safe_load(f)
+
+                component_loaders = {
+                    'telegram': lambda: TelegramSettings(**data['telegram']) if 'telegram' in data else None,
+                    'discord': lambda: DiscordSettings(**data['discord']) if 'discord' in data else None,
+                    'weaviate': lambda: WeaviateSettings(**data['weaviate']) if 'weaviate' in data else None,
+                    'plugins': lambda: {name: PluginSettings(plugin_name=name, plugin_config=settings)
+                                        for name, settings in data['plugins'].items()} if 'plugins' in data else None,
+                    'llm': lambda: self.load_llm_settings() if 'llm_type' in data else None
+                }
+
+                if component in component_loaders:
+                    result = component_loaders[component]()
+                    if result is None:
+                        logger.warning(f"Component '{component}' not found in settings.")
+                        return
+
+                    logger.info(f"Component '{component}' loaded successfully.")
+                    return result
+                else:
+                    logger.error(f"Invalid component: '{component}'. Cannot load settings.")
+                    raise ValueError(f"Invalid component: '{component}'.")
+        except (FileNotFoundError, yaml.YAMLError) as e:
+            logger.error(f"Error loading settings from {self.yaml_path}: {e}")
+            raise
 
     def save_settings(self):
         all_settings = {}
