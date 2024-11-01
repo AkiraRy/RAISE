@@ -1,10 +1,8 @@
 import asyncio
-from datetime import time
-
-import weaviate
 from weaviate.connect import ConnectionParams
 from core.memory import Async_DB_Interface
 from weaviate import WeaviateAsyncClient
+from config.settings import WeaviateSettings
 # from weaviate.exceptions import *
 
 import logging
@@ -28,8 +26,8 @@ class Weaviate(Async_DB_Interface):
             return
         logger.warning(f"[Weaviate/close] Cannot close connection, client doesn't exists")
 
-    def __init__(self, settings: "WeaviateSettings"):
-        self.config = settings
+    def __init__(self, settings: WeaviateSettings):
+        self.config: WeaviateSettings = settings
         self.client: WeaviateAsyncClient | None = None
 
     async def connect_db(self):
@@ -49,7 +47,7 @@ class Weaviate(Async_DB_Interface):
                     grpc_secure=self.config.grpc_secure
                 )
 
-                self.client = weaviate.WeaviateAsyncClient(connection_params=conn_params)
+                self.client = WeaviateAsyncClient(connection_params=conn_params)
                 await self.client.connect()
                 logger.info(f"[Weaviate/connect_db] Successfully connected to Async version of Weaviate")
                 return 0
