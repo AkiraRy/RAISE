@@ -13,10 +13,13 @@ from dataclasses import dataclass, asdict, field
 load_dotenv()
 
 BASE_DIR = Path(__file__).parent.parent
+
 CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
 DEFAULT_SETTINGS = PROFILES_DIR / "settings.yaml"
 LLM_SETTINGS = CONFIG_DIR / "llm_settings"
+BACKUP_DIR = BASE_DIR / "assets" / "db_backups"
+
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,

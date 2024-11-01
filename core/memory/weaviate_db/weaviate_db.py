@@ -5,17 +5,27 @@ import weaviate
 from weaviate.connect import ConnectionParams
 from core.memory import Async_DB_Interface
 from weaviate import WeaviateAsyncClient
-from weaviate.exceptions import *
+# from weaviate.exceptions import *
 
 import logging
 logger = logging.getLogger("bot")
 
 
 class Weaviate(Async_DB_Interface):
+    async def add_memories(self, *args, **kwargs):
+        pass
+
+    async def get_context(self, *args, **kwargs):
+        pass
+
+    async def get_chat_memory(self):
+        pass
+
     async def close(self):
-        if self.client:
+        if self.client and await self.client.is_live():
             await self.client.close()
             logger.info(f"[Weaviate/close] Connection is closed successfully.")
+            return
         logger.warning(f"[Weaviate/close] Cannot close connection, client doesn't exists")
 
     def __init__(self, settings: "WeaviateSettings"):
@@ -43,7 +53,7 @@ class Weaviate(Async_DB_Interface):
                 await self.client.connect()
                 logger.info(f"[Weaviate/connect_db] Successfully connected to Async version of Weaviate")
                 return 0
-            except Exception as e: # should fix this later proly
+            except Exception as e:  # should fix this later proly
                 if self.client:
                     await self.client.close()
                 logger.error(err_str.format(e=str(e)))

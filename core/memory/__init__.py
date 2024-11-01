@@ -7,7 +7,7 @@ class Async_DB_Interface(ABC):
         pass
 
     @abstractmethod
-    async def add_data(self, *args, **kwargs):
+    async def add_memories(self, *args, **kwargs):
         pass
 
     @abstractmethod
@@ -16,4 +16,13 @@ class Async_DB_Interface(ABC):
 
     @abstractmethod
     async def close(self):
+        pass
+
+    @abstractmethod
+    async def get_context(self, *args, **kwargs):
+        """get context using similarity search on the db data"""
+        pass
+
+    @abstractmethod
+    async def get_chat_memory(self):
         pass
