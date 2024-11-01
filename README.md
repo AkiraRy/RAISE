@@ -1,36 +1,33 @@
 
 # RAISE
 
-![GitHub](https://img.shields.io/github/license/AkiraRy/RAISE) ![GitHub stars](https://img.shields.io/github/stars/AkiraRy/RAISE) ![GitHub forks](https://img.shields.io/github/forks/AkiraRy/RAISE)
+## Rewriting Stageg
 
-## Overview
+### Core
+| Component       | Status |
+|-----------------|--------|
+| memory          | 🟡     |
+| brain (kurisu)  | 🔴     |
+| plugin manager  | 🔴     |
 
-RAISE is an AI-powered Telegram bot designed to facilitate engaging and intelligent conversations. Leveraging advanced AI models, RAISE aims to offer a seamless user experience by integrating voice handling, emotion classification, and more.
+### Communication
+| Platform       | Status |
+|----------------|--------|
+| Telegram       | 🟡     |
+| Discord        | 🔴     |
+| GUI            | 🔴     |
 
-## Features
+### Backend
+| Component      | Status |
+|----------------|--------|
+| FastAPI server | 🔴     |
 
-- **VectorDB Integration**: Efficient data handling and retrieval using Weaviate.
-- **AI Communication**: Supports any type of endpoint, with a preference for Oobabooga WebUI public API.
-- **Voice Handling**: Convert user voice messages to text using Whisper.
-- **Emotion Classification**: Enhance interactions with emotion-based stickers (Upcoming).
-- **Voice for AI**: AI-generated voice responses using VoiceVox, with the option for further voice changing via RVC.
-
-## Installation
-
-Currently no installation guide.
-
-## Goals
-
-- Goal number 1. Is to create a classifier of user requests. So depending on that LLM can invoke different modules like:
-  - Home assistance
-  - checking weather
-  - web surfing
-  - image generation
-  - writing of emails
-  - (Options are endless)
-- Implement voice handlers.
-- Make good responsive GUI
-
+### Plugins
+| Plugin             | Status |
+|--------------------|--------|
+| whisper STT        | 🔴     |
+| voicevox voice TTS | 🔴     |
+| RVC STS            | 🔴     |
 
 
 ## License
