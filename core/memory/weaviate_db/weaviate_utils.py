@@ -105,6 +105,20 @@ async def retrieve_all_objects(weaviate_db: Weaviate, limit=50):
     return all_objects
 
 
+async def delete_by_uuid(weaviate_db: Weaviate, uuid: str):
+    assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
+    collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+    collection.data.delete_by_id(
+        uuid
+    )
+
+
+async def get_by_uuid(weaviate_db: Weaviate, uuid: str):
+    assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
+    collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+    return collection.query.fetch_object_by_id(uuid)
+
+
 async def main():
     wset = SettingsManager().load_single_module("weaviate")
     w_db = Weaviate(settings=wset)
@@ -117,7 +131,7 @@ async def main():
         file_back = "backup_MemoryK_2024_11_02-00_01_19.json"
         await load_from_backup(w_db, file_back)
     finally:
-        await w_db.client.close()
+        await w_db.close()
 
 
 if __name__ == '__main__':
