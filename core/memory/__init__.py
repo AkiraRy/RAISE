@@ -1,4 +1,12 @@
 from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field
+from datetime import datetime
+
+
+class Memory(BaseModel):
+    from_name: str
+    message: str
+    time: datetime
 
 
 class Async_DB_Interface(ABC):
@@ -7,11 +15,7 @@ class Async_DB_Interface(ABC):
         pass
 
     @abstractmethod
-    async def add_memories(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    async def retrieve(self, *args, **kwargs):
+    async def add_memories(self, memory: Memory):
         pass
 
     @abstractmethod
