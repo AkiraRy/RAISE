@@ -4,9 +4,11 @@
 ## Rewriting Stage
 
 ### Core
+🔴 Not completed 🟡 In progress 🟢 Finished
+
 | Component       | Status |
 |-----------------|--------|
-| memory          | 🟡     |
+| memory          | 🟢     |
 | brain (kurisu)  | 🔴     |
 | plugin manager  | 🔴     |
 

@@ -154,6 +154,7 @@ class WeaviateSettings(BaseSettings):
     limit: int = 2
     sim_search_type: str = 'hybrid'
 
+
 @dataclass
 class PluginSettings:  # no idea currently how to add validation here.
     plugin_name: str

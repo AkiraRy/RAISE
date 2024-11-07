@@ -16,7 +16,7 @@ class Memory(BaseModel):
     score: Optional[float] = None
 
 
-class SimilaritySearch(BaseModel):
+class MemoryChain(BaseModel):
     memories: Optional[List[Memory]] = Field(default_factory=list)
 
     def add_object(self,

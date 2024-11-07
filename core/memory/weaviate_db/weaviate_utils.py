@@ -7,7 +7,7 @@ import weaviate
 from weaviate.classes.query import MetadataQuery, Filter
 from weaviate import exceptions
 from config.settings import BACKUP_DIR
-from core.memory import Memory, SimilaritySearch
+from core.memory import Memory, MemoryChain
 from weaviate.classes.query import Sort
 from core.memory.weaviate_db import WeaviateBase
 
@@ -23,8 +23,8 @@ async def backup(weaviate_db: WeaviateBase):
         data = await retrieve_all_objects(weaviate_db)
         with open(backup_path, 'w') as file:
             json.dump(data, file, indent=4)
-    except:
-        pass
+    except Exception as e:
+        print(e)
     else:
         print(f"Backup was successfully created")
         return backup_path
@@ -80,9 +80,9 @@ async def retrieve_all_objects(weaviate_db: WeaviateBase, limit=50):
     offset = 0
     all_objects = {}
 
-    article = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+    collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
     while True:
-        response = await article.query.fetch_objects(
+        response = await collection.query.fetch_objects(
             sort=Sort.by_property(name="datetime", ascending=True),
             limit=limit,
             offset=offset
@@ -106,8 +106,8 @@ async def retrieve_all_objects(weaviate_db: WeaviateBase, limit=50):
     return all_objects
 
 
-def convert_response_to_sim_class(response):
-    sim_search = SimilaritySearch()
+def convert_response_to_mem_chain(response):
+    sim_search = MemoryChain()
     # return response.objects
     for o in response.objects:
         from_name = o.properties["from"]
@@ -136,7 +136,7 @@ async def bm_25_search(weaviate_db: WeaviateBase, query: str):
             return_metadata=MetadataQuery(score=True)
         )
 
-        return convert_response_to_sim_class(response)
+        return convert_response_to_mem_chain(response)
 
     except Exception as e:
         print(e)
@@ -155,7 +155,7 @@ async def near_text_search(weaviate_db: WeaviateBase, query: str):
             return_metadata=MetadataQuery(distance=True)
         )
 
-        return convert_response_to_sim_class(response)
+        return convert_response_to_mem_chain(response)
     except Exception as e:
         print(e)
 
@@ -173,7 +173,7 @@ async def hybrid_search(weaviate_db: WeaviateBase, query: str):
             return_metadata=MetadataQuery(score=True)
         )
 
-        return convert_response_to_sim_class(response)
+        return convert_response_to_mem_chain(response)
     except Exception as e:
         print(e)
 

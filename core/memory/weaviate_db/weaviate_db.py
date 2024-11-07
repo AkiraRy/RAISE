@@ -2,12 +2,13 @@ import asyncio
 from enum import Enum
 from typing import Optional
 
-from weaviate.connect import ConnectionParams
-from core.memory import Memory, SimilaritySearch
-from core.memory.weaviate_db import WeaviateBase
-from core.memory.weaviate_db.weaviate_utils import bm_25_search, near_text_search, hybrid_search
-from weaviate import WeaviateAsyncClient, exceptions
 from config.settings import WeaviateSettings
+from core.memory import Memory, MemoryChain
+from core.memory.weaviate_db.weaviate_utils import bm_25_search, near_text_search, hybrid_search, convert_response_to_mem_chain
+from core.memory.weaviate_db import WeaviateBase
+from weaviate import WeaviateAsyncClient, exceptions
+from weaviate.classes.query import Sort
+from weaviate.connect import ConnectionParams
 # from weaviate.exceptions import *
 
 import logging
@@ -43,7 +44,7 @@ class Weaviate(WeaviateBase):
         else:
             logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
 
-    async def get_context(self, query: str) -> Optional[SimilaritySearch]:
+    async def get_context(self, query: str) -> Optional[MemoryChain]:
         # returns n similar messages texted by user to the query
         if not self.client or not await self.client.is_live():
             logger.error(f"[Weaviate/get_context] Connection is closed. Cannot get context")
@@ -52,9 +53,17 @@ class Weaviate(WeaviateBase):
         sim_search_function = similarity_search.get(self.config.sim_search_type, hybrid_search)
         return await sim_search_function(self, query)
 
-    async def get_chat_memory(self):
-        # returns last n messages, n counts for both the user and ai
-        pass
+    async def get_chat_memory(self, limit_messages=20):
+        # returns last n messages, n counts for both the user and an AI
+        collection = self.client.collections.get(self.config.class_name)
+
+        response = await collection.query.fetch_objects(
+            sort=Sort.by_property(name="datetime", ascending=False),
+            limit=limit_messages,
+        )
+        mem_chain = convert_response_to_mem_chain(response)
+        mem_chain.memories.reverse()  # chat order
+        return mem_chain
 
     async def close(self):
         if self.client and await self.client.is_live():
