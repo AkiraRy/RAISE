@@ -1,6 +1,10 @@
 import asyncio
+from enum import Enum
+
 from weaviate.connect import ConnectionParams
 from core.memory import Async_DB_Interface, Memory
+from core.memory.weaviate_db import WeaviateBase
+from core.memory.weaviate_db.weaviate_utils import bm_25_search, near_text_search, hybrid_search
 from weaviate import WeaviateAsyncClient, exceptions
 from config.settings import WeaviateSettings
 # from weaviate.exceptions import *
@@ -8,10 +12,18 @@ from config.settings import WeaviateSettings
 import logging
 logger = logging.getLogger("bot")
 
+similarity_search = {
+    "hybrid": hybrid_search,
+    "bm_25": bm_25_search,
+    'near_text': near_text_search
+}
+
 
 # TODO add here in exceptions to check if we somehow became unalive and if so try to connect again
+class Weaviate(WeaviateBase):
+    def __init__(self, settings: WeaviateSettings):
+        super().__init__(settings)
 
-class Weaviate(Async_DB_Interface):
     async def add_memories(self, memory: Memory):
         if not self.client or not await self.client.is_live():
             logger.error(f"[Weaviate/add_memories] Connection is closed. Cannot add memories")
@@ -24,14 +36,20 @@ class Weaviate(Async_DB_Interface):
                 "message": memory.message,
                 "datetime": memory.time
             })
-            return uuid
         except exceptions.UnexpectedStatusCodeError as e:
             logger.error(f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters")
             return None
+        else:
+            logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
 
-    async def get_context(self, *args, **kwargs):
-        # returns n similar messages to the query
-        pass
+    async def get_context(self, query: str):
+        # returns n similar messages texted by user to the query
+        if not self.client or not await self.client.is_live():
+            logger.error(f"[Weaviate/get_context] Connection is closed. Cannot get context")
+            return None
+
+        sim_search_function = similarity_search.get(self.config.sim_search_type, hybrid_search)
+        return sim_search_function
 
     async def get_chat_memory(self):
         # returns last n messages, n counts for both the user and ai
@@ -44,11 +62,7 @@ class Weaviate(Async_DB_Interface):
             return
         logger.warning(f"[Weaviate/close] Cannot close connection, client doesn't exists")
 
-    def __init__(self, settings: WeaviateSettings):
-        self.config: WeaviateSettings = settings
-        self.client: WeaviateAsyncClient | None = None
-
-    async def connect_db(self):
+    async def connect(self):
         max_retries = self.config.max_retries
         retry_delay = self.config.retry_delay
         final_err_str = "Failed to connect to Weaviate server after multiple attempts"

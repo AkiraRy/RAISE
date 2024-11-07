@@ -60,7 +60,7 @@ class Async_DB_Interface(ABC):
         pass
 
     @abstractmethod
-    async def get_context(self, *args, **kwargs):
+    async def get_context(self, query):
         """get context using similarity search on the db data"""
         pass
 
