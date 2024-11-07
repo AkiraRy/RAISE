@@ -159,6 +159,25 @@ async def near_text_search(weaviate_db: Weaviate, query: str):
     except Exception as e:
         print(e)
 
+
+async def hybrid_search_test(weaviate_db: Weaviate, query: str):
+    try:
+        filter_name = Filter.by_property("from").equal(weaviate_db.config.author_name)
+        collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+        response = await collection.query.hybrid(
+            query=query,
+            filters=filter_name,
+            limit=weaviate_db.config.limit,
+            alpha=weaviate_db.config.alpha,
+            query_properties=["message"],
+            return_metadata=MetadataQuery(score=True)
+        )
+
+        return convert_response_to_sim_class(response)
+    except Exception as e:
+        print(e)
+
+
 async def delete_by_uuid(weaviate_db: Weaviate, uuid: str):
     assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
     collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
@@ -186,8 +205,12 @@ async def test():
         # await load_from_backup(w_db, file_back)
         # uuid = "1b825cd3-a563-4e84-8ba5-78cd6eadb533"
         # print(await get_by_uuid(w_db, uuid))
-        # sim_search = await bm_25_search(w_db, "JLPT")
-        sim_search = await near_text_search(w_db, "AI")
+        query = "eat before exam"
+        sim_search = await bm_25_search(w_db, query)
+        print(sim_search)
+        sim_search = await near_text_search(w_db, query)
+        print(sim_search)
+        sim_search = await hybrid_search_test(w_db, query)
         print(sim_search)
     finally:
         await w_db.close()
