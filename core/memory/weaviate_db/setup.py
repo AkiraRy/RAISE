@@ -36,7 +36,7 @@ async def main():
     try:
         wset = SettingsManager().load_single_module("weaviate")
         w_db = Weaviate(wset)
-        await w_db.connect_db()
+        await w_db.connect()
         await create_collection(client=w_db.client, collection_name=wset.class_name)
     except AssertionError as e:
         print("Collection allready exists, will do nothing") # change to logs in future

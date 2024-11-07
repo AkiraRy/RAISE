@@ -1,7 +1,7 @@
 
 # RAISE
 
-## Rewriting Stageg
+## Rewriting Stage
 
 ### Core
 | Component       | Status |
