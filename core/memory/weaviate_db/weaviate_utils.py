@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import json
 import os.path
+from typing import Optional
 
 import weaviate
 from weaviate.classes.query import MetadataQuery, Filter
@@ -10,41 +11,50 @@ from config.settings import BACKUP_DIR
 from core.memory import Memory, MemoryChain
 from weaviate.classes.query import Sort
 from core.memory.weaviate_db import WeaviateBase
+import logging
+logger = logging.getLogger()
 
 
 # all backups would be stored at base/asses/db_backups
 # TODO MAKE ASYNC WRITING OF BACKUP TO FILE LATER ON
 async def backup(weaviate_db: WeaviateBase):
+    logging.info(f'[Weaviate_utils/backup] Started making a backup')
+
     # first we will make it not async
     name_backup = f"backup_{weaviate_db.config.class_name}_{datetime.datetime.now().strftime('%Y_%m_%d-%H_%M_%S')}.json"
     backup_path = BACKUP_DIR / name_backup
     try:
-        print(f"Backup with name '{backup_path}' will be created")
+        logging.info(f"[Weaviate_utils/backup] Backup with name '{backup_path}' will be created")
         data = await retrieve_all_objects(weaviate_db)
         with open(backup_path, 'w') as file:
             json.dump(data, file, indent=4)
     except Exception as e:
-        print(e)
+        logging.error(f"[Weaviate_utils/backup] Couldn't make a backup, error: {e}")
     else:
-        print(f"Backup was successfully created")
+        logger.info(f"[Weaviate_utils/backup] Backup was successfully created")
         return backup_path
 
 
 def load_data_from_file(filename):
+    logging.info(f'[Weaviate_utils/load_data_from_file] Started loading data from a file {filename}')
+
     try:
         with open(filename, "r", encoding='utf-8') as data:
             list_of_objects = json.load(data)
     except IOError:
-        print(f"Couldn't load file from backup '{filename}'")
+        logging.error(f"[Weaviate_utils/load_data_from_file] Couldn't load file from backup '{filename}'")
         return None
-    print(f"Loaded data from backup '{filename}'")
+
+    logging.info(f"[Weaviate_utils/load_data_from_file] Loaded data from backup '{filename}'")
     return list_of_objects
 
 
 async def load_from_backup(weaviate_db: WeaviateBase, file_name):
+    logging.info(f'[Weaviate_utils/load_from_backup] Started loading from a backup')
+
     full_path = BACKUP_DIR / file_name
     if not os.path.exists(full_path):
-        print(f"There is no backup with this path: {full_path} ")
+        logging.error(f"[Weaviate_utils/load_from_backup] There is no backup with this path: {full_path} ")
         return -1
 
     data = load_data_from_file(full_path)
@@ -64,11 +74,12 @@ async def load_from_backup(weaviate_db: WeaviateBase, file_name):
                 "datetime": datetime_field
             })
         except exceptions.ObjectAlreadyExistsException:
-            print(f'This is already in memory\n{from_field}, {message_field}\n')
+            logging.error(f'[Weaviate_utils/load_from_backup] This is already in memory\n{from_field}, {message_field}\n')
         except weaviate.SchemaValidationException:
             raise exceptions.SchemaValidationException
         else:
-            print(f'Successfully added to memory, uuid: {uuid}')
+            logging.info(f'[Weaviate_utils/load_from_backup] Successfully added to memory, uuid: {uuid}')
+    logging.info(f'[Weaviate_utils/load_from_backup] Successfully made a backup {full_path}')
 
 
 async def get_metadata(weaviate_db: WeaviateBase):
@@ -77,54 +88,78 @@ async def get_metadata(weaviate_db: WeaviateBase):
 
 
 async def retrieve_all_objects(weaviate_db: WeaviateBase, limit=50):
+    logging.info(f'[Weaviate_utils/retrieve_all_objects] Started retrieving all objects from a database')
+
     offset = 0
     all_objects = {}
+    try:
+        collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+        while True:
+            logging.info(f"[Weaviate_utils/retrieve_all_objects] Objects from {offset} to {offset+limit}")
+            response = await collection.query.fetch_objects(
+                sort=Sort.by_property(name="datetime", ascending=True),
+                limit=limit,
+                offset=offset
+            )
 
-    collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
-    while True:
-        response = await collection.query.fetch_objects(
-            sort=Sort.by_property(name="datetime", ascending=True),
-            limit=limit,
-            offset=offset
-        )
+            if not response.objects:
+                logging.info(f"[Weaviate_utils/retrieve_all_objects] no objects at {offset} to {offset + limit}")
+                break
 
-        if not response.objects:
-            break
+            for o in response.objects:
+                data = {
+                    "from": o.properties["from"],
+                    "message": o.properties["message"],
+                    "datetime": o.properties["datetime"].isoformat(),
+                }
+                all_objects[str(o.uuid)] = data
+                logging.info(f"[Weaviate_utils/retrieve_all_objects] adding object uuid({str(o.uuid)}) {data}")
 
-        for o in response.objects:
-            data = {
-                "from": o.properties["from"],
-                "message": o.properties["message"],
-                "datetime": o.properties["datetime"].isoformat(),
-            }
-            all_objects[str(o.uuid)] = data
+            offset += limit
+            if len(response.objects) < limit:
+                logging.info(f"[Weaviate_utils/retrieve_all_objects] There is less objects than {limit}, escaping loop")
+                break
 
-        offset += limit
-        if len(response.objects) < limit:
-            break
-
-    return all_objects
+        logging.info(f"[Weaviate_utils/retrieve_all_objects] Successfully returned all objects {offset}")
+        return all_objects
+    except Exception as e:
+        logging.error(f"[Weaviate_utils/retrieve_all_objects] got an unexpected error {e}")
 
 
-def convert_response_to_mem_chain(response):
+def convert_response_to_mem_chain(response, algo_name: Optional[str] = None) -> Optional[MemoryChain]:
+    if not response:
+        logging.warning(f"[Weaviate_utils.py/convert_response_to_mem_chain] There are no similar elements in the response")
+        return None
+
     sim_search = MemoryChain()
-    # return response.objects
-    for o in response.objects:
-        from_name = o.properties["from"]
-        message = o.properties["message"]
-        time = o.properties["datetime"]
-        distance = o.metadata.distance
-        certainty = o.metadata.certainty
-        score = o.metadata.score
+    try:
+        for o in response.objects:
+            from_name = o.properties["from"]
+            message = o.properties["message"]
+            time = o.properties["datetime"]
+            distance = o.metadata.distance
+            certainty = o.metadata.certainty
+            score = o.metadata.score
 
-        memory = Memory(from_name=from_name, message=message, time=time, distance=distance, certainty=certainty,
-                        score=score)
-        # sim_search.add_object(from_name=from_name,message=message,time=time,distance=distance,certainty=certainty,score=score)
-        sim_search.add_object(memory=memory)
+            memory = Memory(from_name=from_name, message=message, time=time, distance=distance, certainty=certainty,
+                            score=score)
+            # sim_search.add_object(from_name=from_name,message=message,time=time,distance=distance,certainty=certainty,score=score)
+            sim_search.add_object(memory=memory)
+    except Exception as e:
+        logging.error(f"[Weaviate_utils.py/convert_response_to_mem_chain] got an unexpected error {e}")
+        return None
+
+    if algo_name:
+        logging.info(f"[Weaviate_utils.py/convert_response_to_mem_chain] Successfully made a memory chain of similar"
+                     f" messages using {algo_name}")
+    else:
+        logging.info(f"[Weaviate_utils.py/convert_response_to_mem_chain] Successfully made a memory chain")
     return sim_search
 
 
-async def bm_25_search(weaviate_db: WeaviateBase, query: str):
+async def bm_25_search(weaviate_db: WeaviateBase, query: str) -> Optional[MemoryChain]:
+    logging.info(f"[Weaviate_utils/bm_25_search] Starting bm25 keyword similarity search, for query {query}")
+
     try:
         filter_name = Filter.by_property("from").equal(weaviate_db.config.author_name)
         collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
@@ -136,13 +171,14 @@ async def bm_25_search(weaviate_db: WeaviateBase, query: str):
             return_metadata=MetadataQuery(score=True)
         )
 
-        return convert_response_to_mem_chain(response)
-
+        return convert_response_to_mem_chain(response, "bm25")
     except Exception as e:
-        print(e)
+        logging.error(f"[Weaviate_utils/bm_25_search] got an unexpected error {e}")
 
 
-async def near_text_search(weaviate_db: WeaviateBase, query: str):
+async def near_text_search(weaviate_db: WeaviateBase, query: str) -> Optional[MemoryChain]:
+    logging.info(f"[Weaviate_utils/near_text_search] Starting near text vector similarity search, for query {query}")
+
     try:
         filter_name = Filter.by_property("from").equal(weaviate_db.config.author_name)
         collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
@@ -155,12 +191,14 @@ async def near_text_search(weaviate_db: WeaviateBase, query: str):
             return_metadata=MetadataQuery(distance=True)
         )
 
-        return convert_response_to_mem_chain(response)
+        return convert_response_to_mem_chain(response, "near text")
     except Exception as e:
-        print(e)
+        logging.error(f"[Weaviate_utils/near_text_search] got an unexpected error {e}")
 
 
-async def hybrid_search(weaviate_db: WeaviateBase, query: str):
+async def hybrid_search(weaviate_db: WeaviateBase, query: str) -> Optional[MemoryChain]:
+    logging.info(f"[Weaviate_utils/hybrid_search] Starting hybrid similarity search, for query {query}")
+
     try:
         filter_name = Filter.by_property("from").equal(weaviate_db.config.author_name)
         collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
@@ -173,9 +211,9 @@ async def hybrid_search(weaviate_db: WeaviateBase, query: str):
             return_metadata=MetadataQuery(score=True)
         )
 
-        return convert_response_to_mem_chain(response)
+        return convert_response_to_mem_chain(response, "hybrid")
     except Exception as e:
-        print(e)
+        logging.error(f"[Weaviate_utils/hybrid_search] got an unexpected error {e}")
 
 
 async def delete_by_uuid(weaviate_db: WeaviateBase, uuid: str):
