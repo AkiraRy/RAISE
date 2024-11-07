@@ -1,8 +1,9 @@
 import asyncio
 from enum import Enum
+from typing import Optional
 
 from weaviate.connect import ConnectionParams
-from core.memory import Async_DB_Interface, Memory
+from core.memory import Memory, SimilaritySearch
 from core.memory.weaviate_db import WeaviateBase
 from core.memory.weaviate_db.weaviate_utils import bm_25_search, near_text_search, hybrid_search
 from weaviate import WeaviateAsyncClient, exceptions
@@ -42,14 +43,14 @@ class Weaviate(WeaviateBase):
         else:
             logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
 
-    async def get_context(self, query: str):
+    async def get_context(self, query: str) -> Optional[SimilaritySearch]:
         # returns n similar messages texted by user to the query
         if not self.client or not await self.client.is_live():
             logger.error(f"[Weaviate/get_context] Connection is closed. Cannot get context")
             return None
 
         sim_search_function = similarity_search.get(self.config.sim_search_type, hybrid_search)
-        return sim_search_function
+        return await sim_search_function(self, query)
 
     async def get_chat_memory(self):
         # returns last n messages, n counts for both the user and ai

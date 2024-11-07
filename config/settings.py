@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from logging.config import dictConfig
 import logging
 from dataclasses import dataclass, asdict, field
-
+# TODO AT THE TOP OF THIS FILE ADD CHECKER FOR EVERY PATH< BUT BETTER DO IT IN THE INNIT
 load_dotenv()
 
 BASE_DIR = Path(__file__).parent.parent
@@ -139,6 +139,7 @@ class WeaviateSettings(BaseSettings):
         if errors:
             raise ValueError(f"Validation errors in WeaviateSettings: {', '.join(errors)}")
 
+    author_name: str
     class_name: str = "MemoryK"  # for testing i will use an already created class
     http_host: str = "localhost"
     http_port: int = 8080
@@ -148,9 +149,10 @@ class WeaviateSettings(BaseSettings):
     grpc_secure: bool = False
     retry_delay: int = 2  # seconds
     max_retries: int = 2
-
-
-
+    max_distance: float = 0.5
+    alpha: float = 0.5  # 1 pure vector search, 0 pure keyword search
+    limit: int = 2
+    sim_search_type: str = 'hybrid'
 
 @dataclass
 class PluginSettings:  # no idea currently how to add validation here.
