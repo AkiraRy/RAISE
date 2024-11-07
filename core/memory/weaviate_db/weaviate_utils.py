@@ -142,6 +142,23 @@ async def bm_25_search(weaviate_db: Weaviate, query: str):
         print(e)
 
 
+async def near_text_search(weaviate_db: Weaviate, query: str):
+    try:
+        filter_name = Filter.by_property("from").equal(weaviate_db.config.author_name)
+        collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+
+        response = await collection.query.near_text(
+            query=query,
+            filters=filter_name,
+            limit=weaviate_db.config.limit,
+            distance=weaviate_db.config.max_distance,
+            return_metadata=MetadataQuery(distance=True)
+        )
+
+        return convert_response_to_sim_class(response)
+    except Exception as e:
+        print(e)
+
 async def delete_by_uuid(weaviate_db: Weaviate, uuid: str):
     assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
     collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
@@ -169,7 +186,8 @@ async def test():
         # await load_from_backup(w_db, file_back)
         # uuid = "1b825cd3-a563-4e84-8ba5-78cd6eadb533"
         # print(await get_by_uuid(w_db, uuid))
-        sim_search = await bm_25_search(w_db, "JLPT")
+        # sim_search = await bm_25_search(w_db, "JLPT")
+        sim_search = await near_text_search(w_db, "AI")
         print(sim_search)
     finally:
         await w_db.close()
