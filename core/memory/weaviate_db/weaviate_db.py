@@ -25,25 +25,28 @@ class Weaviate(WeaviateBase):
     def __init__(self, settings: WeaviateSettings):
         super().__init__(settings)
 
-    async def add_memories(self, memory: Memory) -> int:
-        logger.error(f"[Weaviate/add_memories] Starting to add memories {memory}")
+    async def add_memories(self, memory_chain: MemoryChain) -> int:
+        logger.error(f"[Weaviate/add_memories] Starting to add memories {memory_chain}")
 
         if not self.client or not await self.client.is_live():
             logger.error(f"[Weaviate/add_memories] Connection is closed. Cannot add memories")
             return -1
 
         collection = self.client.collections.get(self.config.class_name)
+
         try:
-            uuid = await collection.data.insert({
-                "from": memory.from_name,
-                "message": memory.message,
-                "datetime": memory.time
-            })
+            for memory in memory_chain.memories:
+                uuid = await collection.data.insert({
+                    "from": memory.from_name,
+                    "message": memory.message,
+                    "datetime": memory.time
+                })
+                logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
         except exceptions.UnexpectedStatusCodeError as e:
             logger.error(f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters")
             return -1
         else:
-            logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
+            logger.info(f"[Weaviate/add_memories] Memory chain added successfully")
             return 0
 
     async def get_context(self, query: str) -> Optional[MemoryChain]:
