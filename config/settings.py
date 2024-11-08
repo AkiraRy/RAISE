@@ -1,8 +1,7 @@
 from pathlib import Path
-import os
 import sys
 from abc import ABC, abstractmethod
-from typing import Dict, Type, Optional
+from typing import Dict, Optional
 
 import yaml
 from dotenv import load_dotenv
@@ -18,7 +17,8 @@ CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
 DEFAULT_SETTINGS = PROFILES_DIR / "settings.yaml"
 LLM_SETTINGS = CONFIG_DIR / "llm_settings"
-BACKUP_DIR = BASE_DIR / "assets" / "db_backups"
+ASSETS_DIR = BASE_DIR / "assets"
+BACKUP_DIR = ASSETS_DIR / "db_backups"
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -188,6 +188,7 @@ class Config(BaseSettings):
     plugins: Dict[str, PluginSettings] = field(default_factory=dict)
     llm: Optional[LLMSettings] = None
     llm_type: str = None
+    persona: str = "default_persona"
 
     def validate(self):
         if not self.weaviate:
@@ -226,6 +227,7 @@ class SettingsManager:
                         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
 
                 self.config.llm_type = data.get('llm_type', 'default')
+                self.config.persona = data.get("persona", "default_persona")
                 self.load_llm_settings()
                 self.config.validate()
                 logger.info("Settings loaded successfully.")

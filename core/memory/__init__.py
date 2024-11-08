@@ -61,10 +61,10 @@ class Async_DB_Interface(ABC):
         pass
 
     @abstractmethod
-    async def get_context(self, query):
+    async def get_context(self, query) -> Optional[MemoryChain]:
         """get context using similarity search on the db data"""
         pass
 
     @abstractmethod
-    async def get_chat_memory(self) -> MemoryChain:
+    async def get_chat_memory(self) -> Optional[MemoryChain]:
         pass
