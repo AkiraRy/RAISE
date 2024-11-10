@@ -9,7 +9,7 @@
 | Component       | Status |
 |-----------------|--------|
 | memory          | 🟢     |
-| brain (kurisu)  | 🔴     |
+| brain (kurisu)  | 🟡     |
 | plugin manager  | 🔴     |
 
 ### Communication
