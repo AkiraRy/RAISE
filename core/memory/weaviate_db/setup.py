@@ -4,7 +4,7 @@ import asyncio
 
 from weaviate import WeaviateAsyncClient
 from weaviate.classes.config import Configure, Property, DataType
-from config.settings import SettingsManager
+from config import SettingsManager
 from core.memory.weaviate_db.weaviate_db import Weaviate
 
 
@@ -33,16 +33,16 @@ async def create_collection(client: WeaviateAsyncClient, collection_name: str):
 
 async def main():
     global w_db
-    try:
-        wset = SettingsManager().load_single_module("weaviate")
-        w_db = Weaviate(wset)
-        await w_db.connect()
-        await create_collection(client=w_db.client, collection_name=wset.class_name)
-    except AssertionError as e:
-        print("Collection allready exists, will do nothing") # change to logs in future
-    finally:
-        if await w_db.client.is_live():
-            await w_db.close()
+    # try:
+    wset = SettingsManager().load_single_module("weaviate")
+    w_db = Weaviate(wset)
+    #     await w_db.connect()
+    #     await create_collection(client=w_db.client, collection_name=wset.class_name)
+    # except AssertionError as e:
+    #     print("Collection allready exists, will do nothing") # change to logs in future
+    # finally:
+    #     if await w_db.client.is_live():
+    #         await w_db.close()
 
 if __name__ == '__main__':
     asyncio.run(main())

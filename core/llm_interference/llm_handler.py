@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union, List, Literal
 
-from llama_cpp.llama_chat_format import format_mistral_instruct, format_chatml
 from config import logger, LLMSettings, MODEL_DIR
 from llama_cpp import Llama, ChatCompletionRequestMessage
 
@@ -85,6 +84,17 @@ class Model:
 
         return response_content, usage, created
 
-    def format_prompt(self):
-        pass
+    def count_tokens(self, prompt: str) -> int:
+        if self.llm_settings.local:
+            return self._count_tokens_local(prompt)
+        return self._count_tokens_remote(prompt)
 
+    def _count_tokens_local(self, prompt: str) -> int:
+        return len(self.llm.tokenize(prompt.encode('utf-8')))
+
+    def _count_tokens_remote(self, prompt):
+        raise NotImplemented
+
+
+    # def format(self): maybe use in future?
+    #     from llama_cpp.llama_chat_format import format_mistral_instruct, format_chatml
