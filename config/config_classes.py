@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from pathlib import Path
 import yaml
 from .settings import DEFAULT_SETTINGS_DIR, ensure_directory_exists, logger, LLM_SETTINGS_DIR
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class BaseSettings(BaseModel):
@@ -101,8 +101,24 @@ class LLMSettings(BaseSettings):
     min_p: float
     typical_p: float
     stream: bool
+    local: bool
+    endpoint: Optional[str] = None
     seed: int | None = None
     stop: str | list[str] | None = field(default_factory=list)
+
+    @model_validator(mode='before')
+    def check_endpoint_if_local_is_false(cls, values):
+        local = values.get('local')
+        endpoint = values.get('endpoint')
+
+        # If 'local' is False, 'endpoint' must be provided
+        if local is False and not endpoint:
+            raise ValueError("If 'local' is set to False, 'endpoint' must be specified.")
+
+        if local is True and endpoint is not None:
+            raise ValueError("If 'local' is set to True, 'endpoint' must not be specified.")
+
+        return values
 
     # def validate(self):
     #     pass
