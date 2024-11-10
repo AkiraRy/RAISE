@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional
 
-from config.settings import WeaviateSettings
+from config import WeaviateSettings, logger
 from core.memory import Memory, MemoryChain
 from core.memory.weaviate_db.weaviate_utils import bm_25_search, near_text_search, hybrid_search, convert_response_to_mem_chain
 from core.memory.weaviate_db import WeaviateBase
@@ -10,8 +10,6 @@ from weaviate.classes.query import Sort
 from weaviate.connect import ConnectionParams
 # from weaviate.exceptions import *
 
-import logging
-logger = logging.getLogger("bot")
 
 similarity_search = {
     "hybrid": hybrid_search,

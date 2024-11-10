@@ -1,6 +1,6 @@
 from abc import ABC
 
-from config.settings import WeaviateSettings
+from config import WeaviateSettings
 from core.memory import Async_DB_Interface
 from weaviate import WeaviateAsyncClient
 

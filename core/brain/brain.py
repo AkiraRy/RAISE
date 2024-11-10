@@ -2,8 +2,7 @@ import logging
 import os
 
 from core.memory import Async_DB_Interface, Memory, MemoryChain
-from config import PROFILES_DIR, get_logger
-logger = get_logger()
+from config import PROFILES_DIR, logger
 
 
 class Singleton(type):
@@ -24,8 +23,14 @@ class Brain(metaclass=Singleton):
         self.persona: str = persona_path
         self.load_persona()
 
+    def count_tokens(self):
+        pass
+    #TODO use from pretrained their model to get tokenizer
+    #TODO check which version do i actually use
+    #TODO maybe get just form their github
+    # TODO AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.2")
+
     def load_persona(self) -> None:
-        logger.info("[brain/load_persona] Trying to load AI persona")
         try:
             path = PROFILES_DIR / f"{self.persona}.txt"
             logger.info(f"[brain/load_persona] Trying to load AI Persona from file at {path}")
