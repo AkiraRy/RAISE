@@ -1,19 +1,23 @@
-from dataclasses import dataclass, asdict, field
-from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Dict, Optional
 from pathlib import Path
 import yaml
-from .settings import DEFAULT_SETTINGS, ensure_directory_exists, logger, LLM_SETTINGS
+from .settings import DEFAULT_SETTINGS_DIR, ensure_directory_exists, logger, LLM_SETTINGS_DIR
 from pydantic import BaseModel
 
 
 class BaseSettings(BaseModel):
-    def load_from_yaml(self, filepath: str):
-        if Path(filepath).exists():
-            with open(filepath, 'r') as f:
-                data = yaml.safe_load(f)
-                for key, value in data.items():
-                    setattr(self, key, value)
+    @classmethod
+    def load_from_yaml(cls, filepath: str) -> "BaseSettings":
+        if not Path(filepath).exists():
+            raise FileNotFoundError(f"The specified YAML file '{filepath}' does not exist.")
+
+        with open(filepath, 'r') as f:
+            data = yaml.safe_load(f)
+
+        instance = cls(**data)
+
+        return instance
 
     def save_to_yaml(self, filepath: str):
         with open(filepath, 'w') as f:
@@ -52,7 +56,7 @@ class WeaviateSettings(BaseSettings):
     #         raise ValueError(f"Validation errors in WeaviateSettings: {', '.join(errors)}")
 
     author_name: str
-    class_name: str = "MemoryK"  # for testing i will use an already created class
+    class_name: str = "MemoryK"  # for testing, I will use an already created class
     http_host: str = "localhost"
     http_port: int = 8080
     http_secure: bool = False
@@ -128,7 +132,7 @@ class Config(BaseSettings):
 
 
 class SettingsManager:
-    def __init__(self, config: Config = Config(),  yaml_path: Path = DEFAULT_SETTINGS):
+    def __init__(self, config: Config = Config(), yaml_path: Path = DEFAULT_SETTINGS_DIR):
         self.config: Config = config
         self.yaml_path = Path(yaml_path)
         ensure_directory_exists(self.yaml_path.parent)
@@ -153,10 +157,10 @@ class SettingsManager:
                 self.config.persona = data.get("persona", "default_persona")
                 self.load_llm_settings()
                 # self.config.validate()
-                logger.info("Settings loaded successfully.")
+                logger.info("[SettingsManager/load_settings] Settings loaded successfully.")
 
             except (FileNotFoundError, yaml.YAMLError) as e:
-                logger.error(f"Error loading settings from {self.yaml_path}: {e}")
+                logger.error(f"[SettingsManager/load_settings] Error loading settings from {self.yaml_path}: {e}")
                 raise
 
         return self
@@ -181,53 +185,56 @@ class SettingsManager:
                 if component in component_loaders:
                     result = component_loaders[component]()
                     if result is None:
-                        logger.warning(f"Component '{component}' not found in settings.")
+                        logger.warning(f"[SettingsManager/load_single_module] Component '{component}' not found in settings.")
                         return
 
-                    logger.info(f"Component '{component}' loaded successfully.")
+                    logger.info(f"[SettingsManager/load_single_module] Component '{component}' loaded successfully.")
                     return result
                 else:
-                    logger.error(f"Invalid component: '{component}'. Cannot load settings.")
+                    logger.error(f"[SettingsManager/load_single_module] Invalid component: '{component}'. Cannot load settings.")
                     raise ValueError(f"Invalid component: '{component}'.")
         except (FileNotFoundError, yaml.YAMLError) as e:
-            logger.error(f"Error loading settings from {self.yaml_path}: {e}")
+            logger.error(f"[SettingsManager/load_single_module] Error loading settings from {self.yaml_path}: {e}")
             raise
 
     def save_settings(self):
         all_settings = {}
         if self.config.telegram:
-            all_settings['telegram'] = asdict(self.config.telegram)
+            all_settings['telegram'] = self.config.telegram.dict()
         if self.config.discord:
-            all_settings['discord'] = asdict(self.config.discord)
+            all_settings['discord'] = self.config.discord.dict()
         if self.config.weaviate:
-            all_settings['weaviate'] = asdict(self.config.weaviate)
+            all_settings['weaviate'] = self.config.weaviate.dict()
 
-        all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
+        # all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
         all_settings['llm_type'] = self.config.llm_type
 
         try:
+            logger.info(f"[SettingsManager/save_settings] trying to save settings to {self.yaml_path}")
             # Ensure parent directory for the settings file exists
             ensure_directory_exists(self.yaml_path.parent)
 
             with open(self.yaml_path, 'w') as f:
                 yaml.dump(all_settings, f, default_flow_style=False)
-            logger.info("Settings saved successfully.")
+
+            llm_settings_path = LLM_SETTINGS_DIR / f"{self.config.llm_type}.yaml"
+            self.config.llm.save_to_yaml(llm_settings_path)
+
+            logger.info("[SettingsManager/save_settings] Settings saved successfully to {self.yaml_path}")
         except Exception as e:
             logger.error(f"Error saving settings to {self.yaml_path}: {e}")
             raise
 
     def load_llm_settings(self):
-        llm_settings_path = LLM_SETTINGS / f"{self.config.llm_type}.yaml"
-        logger.debug(f"Loading LLM settings from: {llm_settings_path}")
+        llm_settings_path = LLM_SETTINGS_DIR / f"{self.config.llm_type}.yaml"
+        logger.debug(f"[SettingsManager/load_llm_settings] Loading LLM settings from: {llm_settings_path}")
         if not llm_settings_path.exists():
-            logger.error(f"LLM settings file '{self.config.llm_type}.yaml' not found in {LLM_SETTINGS}.")
+            logger.error(f"[SettingsManager/load_llm_settings] LLM settings file '{self.config.llm_type}.yaml' not found in {LLM_SETTINGS_DIR}.")
             raise FileNotFoundError(f"LLM settings file '{self.config.llm_type}.yaml' not found.")
         try:
-            with open(llm_settings_path, 'r') as f:
-                llm_data = yaml.safe_load(f)
-                self.config.llm = LLMSettings(**llm_data)
-                # self.config.llm.validate()
-                logger.info(f"LLM settings for {self.config.llm_type} loaded successfully.")
+            self.config.llm = LLMSettings.load_from_yaml(llm_settings_path)
+            #     self.config.llm.validate()
+            logger.info(f"[SettingsManager/load_llm_settings] LLM settings for {self.config.llm_type} loaded successfully.")
         except (FileNotFoundError, yaml.YAMLError) as e:
-            logger.error(f"Error loading LLM settings from {llm_settings_path}: {e}")
+            logger.error(f"[SettingsManager/load_llm_settings] Error loading LLM settings from {llm_settings_path}: {e}")
             raise

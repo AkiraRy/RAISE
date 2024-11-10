@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).parent.parent
 
 CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
-LLM_SETTINGS = CONFIG_DIR / "llm_settings"
-DEFAULT_SETTINGS = PROFILES_DIR / "settings.yaml"
+LLM_SETTINGS_DIR = CONFIG_DIR / "llm_settings"
+DEFAULT_SETTINGS_DIR = PROFILES_DIR / "settings.yaml"
 
 ASSETS_DIR = BASE_DIR / "assets"
 BACKUP_DIR = ASSETS_DIR / "db_backups"
@@ -85,8 +85,8 @@ def ensure_directory_exists(path: Path):
 
 ensure_directory_exists(CONFIG_DIR)
 ensure_directory_exists(PROFILES_DIR)
-ensure_directory_exists(LLM_SETTINGS)
-ensure_directory_exists(DEFAULT_SETTINGS)
+ensure_directory_exists(LLM_SETTINGS_DIR)
+ensure_directory_exists(DEFAULT_SETTINGS_DIR)
 ensure_directory_exists(ASSETS_DIR)
 ensure_directory_exists(BACKUP_DIR)
 ensure_directory_exists(MODEL_DIR)
