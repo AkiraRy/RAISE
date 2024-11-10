@@ -107,6 +107,7 @@ class LLMSettings(BaseSettings):
     stop: str | list[str] | None = field(default_factory=list)
 
     @model_validator(mode='before')
+    @classmethod
     def check_endpoint_if_local_is_false(cls, values):
         local = values.get('local')
         endpoint = values.get('endpoint')
@@ -120,8 +121,18 @@ class LLMSettings(BaseSettings):
 
         return values
 
-    # def validate(self):
-    #     pass
+    @model_validator(mode='before')
+    @classmethod
+    def check_cuda_and_layers(cls, values):
+        cuda = values.get('cuda')
+        n_gpu_layers = values.get('n_gpu_layers')
+
+        # If cuda is set to 0, n_gpu_layers should also be 0
+        if cuda == 0 and n_gpu_layers != 0:
+            logger.warning("Setting 'n_gpu_layers' to 0 as 'cuda' is set to 0.")
+            values['n_gpu_layers'] = 0
+
+        return values
 
 
 class Config(BaseSettings):
