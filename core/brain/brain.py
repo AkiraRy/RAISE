@@ -3,9 +3,11 @@ from dataclasses import dataclass
 from core.memory import Async_DB_Interface, Memory, MemoryChain
 from config import PROFILES_DIR, logger, LLMSettings, MODEL_DIR
 from core.memory import MemoryChain
-from llama_cpp import Llama, ChatCompletionRequestMessage
+from llama_cpp import Llama
 import datetime
 from pathlib import Path
+from llama_cpp.llama_chat_format import format_mistral_instruct, format_chatml
+
 
 @dataclass
 class PromptMessage:
@@ -72,6 +74,7 @@ class Brain(metaclass=Singleton):
 
     async def fulfill_prompt(self) -> Optional[List[dict]]:
         try:
+            logger.info(f"[Brain/fulfill_prompt] Fetching chat memories")
             fetchedMemories: MemoryChain = await self.memory_manager.get_chat_memory()
         except Exception as e:
             logger.error('[Brain/fulfill_prompt] Brain was damaged, could not remember anything {e}')
@@ -82,6 +85,23 @@ class Brain(metaclass=Singleton):
                 'role': self.user_name if self.user_name == memory.from_name else self.assistant_name,
                 'content': memory.message
             })
+
+        curr_tokens_amount = self.forget()  # forgets last message in a chat history if necessary
+        logger.info(f"[Brain/fulfill_prompt] Current total number of tokens is {curr_tokens_amount}")
+        return self.memories
+
+    def forget(self) -> int:
+        """returns total number of tokens at the end"""
+        logger.info(f"Brain/fulfill_prompt] Forgetting last message in the chat history")
+        prompt = self.format_prompt(self.memories)
+        curr_total_tokens = self.count_tokens(prompt)
+
+        while curr_total_tokens > self.token_limit:
+            self.memories.pop(1)
+            prompt = self.format_prompt(self.memories)
+            curr_total_tokens = self.count_tokens(prompt)
+        return curr_total_tokens
+
 
     def load_model(self):
         if self.llm_settings.local:
@@ -168,6 +188,8 @@ class Brain(metaclass=Singleton):
     def _count_tokens_remote(self, prompt):
         raise NotImplemented
 
-    # def format(self): maybe use in future?
-    #     from llama_cpp.llama_chat_format import format_mistral_instruct, format_chatml
+    def format_prompt(self, messages: List[dict]):
+        if self.llm_settings.chat_format == 'mistral-instruct':
+            return format_mistral_instruct(messages).prompt
+        raise NotImplemented
 
