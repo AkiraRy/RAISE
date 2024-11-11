@@ -1,5 +1,6 @@
 import huggingface_hub
 import os
+from . import S
 from config import SettingsManager, MODEL_DIR, LLM_SETTINGS_DIR
 
 

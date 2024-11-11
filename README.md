@@ -1,16 +1,20 @@
 
 # RAISE
 
+# Structure
+
+
 ## Rewriting Stage
 
 ### Core
 🔴 Not completed 🟡 In progress 🟢 Finished
 
-| Component       | Status |
-|-----------------|--------|
-| memory          | 🟢     |
-| brain (kurisu)  | 🟡     |
-| plugin manager  | 🔴     |
+| Component      | Status |
+|----------------|--------|
+| memory         | 🟢     |
+| brain (kurisu) | 🟢     |
+| MessageQueue   | 🟡     |
+| plugin manager | 🔴     |
 
 ### Communication
 | Platform       | Status |
