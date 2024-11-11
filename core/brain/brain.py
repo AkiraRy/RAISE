@@ -1,8 +1,7 @@
 from typing import Optional, List, Literal, Union
 from dataclasses import dataclass
-from core.memory import Async_DB_Interface, Memory, MemoryChain
+from core.memory import MemoryChain, Async_DB_Interface
 from config import PROFILES_DIR, logger, LLMSettings, MODEL_DIR
-from core.memory import MemoryChain
 from llama_cpp import Llama
 import datetime
 from pathlib import Path
@@ -28,6 +27,7 @@ class Usage:
     completion_tokens: int
     total_tokens: int
 
+
 class Singleton(type):
     _instances = {}
 
@@ -38,11 +38,11 @@ class Singleton(type):
 
 
 class Brain(metaclass=Singleton):
-    def __init__(self, memory_manager: Async_DB_Interface, llm_settings: LLMSettings, persona_path: str, user_name: str, assistant_name: str, token_limit: int = 2000):
+    def __init__(self, memory_manager: 'Async_DB_Interface', llm_settings: LLMSettings, persona_path: str, user_name: str, assistant_name: str, token_limit: int = 2000):
         # memory_manager - db instance, persona - name of the file where persona is stored
         # Important classes
-        self.memory_manager: Async_DB_Interface = memory_manager
-        self.llm: Optional[Union[Llama, str]] = None
+        self.memory_manager: 'Async_DB_Interface' = memory_manager
+        self.llm: Optional[Union['Llama', str]] = None
 
         # Config
         self.llm_settings = llm_settings

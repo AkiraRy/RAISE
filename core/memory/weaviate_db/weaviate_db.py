@@ -1,14 +1,12 @@
 import asyncio
 from typing import Optional
 
-from config import WeaviateSettings, logger
-from core.memory import Memory, MemoryChain
-from core.memory.weaviate_db.weaviate_utils import bm_25_search, near_text_search, hybrid_search, convert_response_to_mem_chain
-from core.memory.weaviate_db import WeaviateBase
-from weaviate import WeaviateAsyncClient, exceptions
+from . import WeaviateSettings, logger, MemoryChain, WeaviateBase, WeaviateAsyncClient
+from .weaviate_utils import bm_25_search, near_text_search, hybrid_search, convert_response_to_mem_chain
+
 from weaviate.classes.query import Sort
 from weaviate.connect import ConnectionParams
-# from weaviate.exceptions import *
+from weaviate.exceptions import UnexpectedStatusCodeError
 
 
 similarity_search = {
@@ -20,7 +18,7 @@ similarity_search = {
 
 # TODO add here in exceptions to check if we somehow became unalive and if so try to connect again
 class Weaviate(WeaviateBase):
-    def __init__(self, settings: WeaviateSettings):
+    def __init__(self, settings: 'WeaviateSettings'):
         super().__init__(settings)
 
     async def add_memories(self, memory_chain: MemoryChain) -> int:
@@ -40,8 +38,8 @@ class Weaviate(WeaviateBase):
                     "datetime": memory.time
                 })
                 logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
-        except exceptions.UnexpectedStatusCodeError as e:
-            logger.error(f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters")
+        except UnexpectedStatusCodeError as e:
+            logger.error(f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters {e}")
             return -1
         else:
             logger.info(f"[Weaviate/add_memories] Memory chain added successfully")
