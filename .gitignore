@@ -7,3 +7,5 @@ __pycache__
 *.index
 *.pth
 assets/TODO.md
+*.txt
+*.yaml

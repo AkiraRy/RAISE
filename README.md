@@ -13,7 +13,7 @@
 |----------------|--------|
 | memory         | 🟢     |
 | brain (kurisu) | 🟢     |
-| MessageQueue   | 🟡     |
+| Event Manager  | 🟢     |
 | plugin manager | 🔴     |
 
 ### Communication

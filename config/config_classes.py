@@ -206,7 +206,7 @@ class SettingsManager:
                     'weaviate': lambda: WeaviateSettings(**data['weaviate']) if 'weaviate' in data else None,
                     # 'plugins': lambda: {name: PluginSettings(plugin_name=name, plugin_config=settings)
                     #                     for name, settings in data['plugins'].items()} if 'plugins' in data else None,
-                    'llm': lambda: self.load_llm_settings() if 'llm_type' in data else None
+                    'llm': lambda: self.load_llm_settings(data['llm_type']) if 'llm_type' in data else None
                 }
 
                 if component in component_loaders:
@@ -252,8 +252,11 @@ class SettingsManager:
             logger.error(f"Error saving settings to {self.yaml_path}: {e}")
             raise
 
-    def load_llm_settings(self):
-        llm_settings_path = LLM_SETTINGS_DIR / f"{self.config.llm_type}.yaml"
+    def load_llm_settings(self, llm_type: str = None):
+        if not llm_type:
+            llm_type = self.config.llm_type
+
+        llm_settings_path = LLM_SETTINGS_DIR / f"{llm_type}.yaml"
         logger.debug(f"[SettingsManager/load_llm_settings] Loading LLM settings from: {llm_settings_path}")
         if not llm_settings_path.exists():
             logger.error(f"[SettingsManager/load_llm_settings] LLM settings file '{self.config.llm_type}.yaml' not found in {LLM_SETTINGS_DIR}.")

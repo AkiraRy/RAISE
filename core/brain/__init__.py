@@ -1,6 +1,6 @@
 from typing import Optional, Literal
 from dataclasses import dataclass
-from config import PROFILES_DIR, logger, LLMSettings, MODEL_DIR
+from config import PROFILES_DIR, logger, LLMSettings, MODEL_DIR, SettingsManager, LLM_SETTINGS_DIR
 
 
 @dataclass

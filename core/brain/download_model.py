@@ -1,7 +1,6 @@
 import huggingface_hub
 import os
-from . import S
-from config import SettingsManager, MODEL_DIR, LLM_SETTINGS_DIR
+from . import SettingsManager, MODEL_DIR, LLM_SETTINGS_DIR
 
 
 def model_download(llm_settings: LLM_SETTINGS_DIR):
