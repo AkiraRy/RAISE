@@ -135,15 +135,21 @@ class LLMSettings(BaseSettings):
         return values
 
 
+class PubSubSettings(BaseSettings):
+    input_message_topic: str
+    processed_message_topic: str
+
+
 class Config(BaseSettings):
     telegram: Optional[TelegramSettings] = None
     discord: Optional[DiscordSettings] = None
     weaviate: Optional[WeaviateSettings] = None
-    # plugins: Dict[str, PluginSettings] = field(default_factory=dict)
     llm: Optional[LLMSettings] = None
+    pubsub: Optional[PubSubSettings] = None
     llm_type: str = None
     persona: str = "default_persona"
 
+    # plugins: Dict[str, PluginSettings] = field(default_factory=dict)
     # def validate(self):
     #     if not self.weaviate:
     #         raise ValueError("Weaviate must exists")
@@ -176,6 +182,9 @@ class SettingsManager:
                     self.config.discord = DiscordSettings(**data['discord'])
                 if 'weaviate' in data:
                     self.config.weaviate = WeaviateSettings(**data['weaviate'])
+                if 'pubsub' in data:
+                    self.config.pubsub = PubSubSettings(**data['pubsub'])
+
                 # if 'plugins' in data:
                 #     for name, settings in data['plugins'].items():
                 #         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
@@ -232,12 +241,14 @@ class SettingsManager:
             all_settings['discord'] = self.config.discord.dict()
         if self.config.weaviate:
             all_settings['weaviate'] = self.config.weaviate.dict()
+        if self.config.pubsub:
+            all_settings['pubsub'] = self.config.pubsub.dict()
 
         # all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
         all_settings['llm_type'] = self.config.llm_type
 
         try:
-            logger.info(f"[SettingsManager/save_settings] trying to save settings to {self.yaml_path}")
+            logger.info(f"[SettingsManager/save_settings] Trying to save settings to {self.yaml_path}")
             # Ensure parent directory for the settings file exists
             ensure_directory_exists(self.yaml_path.parent)
 
@@ -247,7 +258,7 @@ class SettingsManager:
             llm_settings_path = LLM_SETTINGS_DIR / f"{self.config.llm_type}.yaml"
             self.config.llm.save_to_yaml(llm_settings_path)
 
-            logger.info("[SettingsManager/save_settings] Settings saved successfully to {self.yaml_path}")
+            logger.info(f"[SettingsManager/save_settings] Settings saved successfully to {self.yaml_path}")
         except Exception as e:
             logger.error(f"Error saving settings to {self.yaml_path}: {e}")
             raise
