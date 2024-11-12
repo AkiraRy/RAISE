@@ -1,4 +1,5 @@
-from core import PubSub, Message, TextMessage
+from core import PubSub
+from utils import Message, TelegramMessage, TextMessage
 import asyncio
 
 
