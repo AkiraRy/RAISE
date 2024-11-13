@@ -3,7 +3,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Any, Coroutine, Type, Optional
 from utils import Message
-
+from config import logger
 
 @dataclass
 class Topic:
@@ -20,11 +20,13 @@ class PubSub:
         self._thread = None
 
     def start(self):
+        logger.info(f"[PubSub/start] Starting worker thread")
         """Start the PubSub event loop in a separate thread."""
         self._thread = threading.Thread(target=self._start_loop, daemon=True)
         self._thread.start()
 
     def _start_loop(self):
+        logger.info(f"[PubSub/_start_loop] Starting worker loop")
         """Set up the event loop to run in the thread."""
         asyncio.set_event_loop(self.loop)
         self.loop.run_until_complete(self.start_working())
@@ -41,6 +43,7 @@ class PubSub:
             await asyncio.sleep(self.pooling_delay)
 
     def stop(self):
+        logger.info(f"[PubSub/stop] Stopping PubSub system")
         """Stop the event loop in the background thread."""
         self.loop.call_soon_threadsafe(self.loop.stop)
         if self._thread:
@@ -50,13 +53,17 @@ class PubSub:
         """Subscribe a handler to a given topic."""
         if topic not in self.channels:
             topic_cls = Topic(queue=asyncio.Queue())
+            logger.info(f"[PubSub/subscribe] creating a new topic {topic}")
             self.channels[topic] = topic_cls
+        logger.info(f"[PubSub/subscribe] subscribed to a {topic}")
         self.channels[topic].listeners.append(handler)
 
     def publish(self, topic: str, message: Message) -> None:
         """Publish a message in a thread-safe way."""
         if topic not in self.channels:
+            logger.warning(f"[PubSub/publish] publishing to a topic no one listens to. Ignoring")
             return
+        logger.info(f'[PubSub/publish] Publishing to a {topic} topic.')
         task = self.channels[topic].queue.put(message)
         asyncio.run_coroutine_threadsafe(task, self.loop)
 

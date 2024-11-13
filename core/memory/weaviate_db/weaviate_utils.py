@@ -69,7 +69,8 @@ async def load_from_backup(weaviate_db: WeaviateBase, file_name):
                 "datetime": datetime_field
             })
         except exceptions.ObjectAlreadyExistsException:
-            logger.error(f'[Weaviate_utils/load_from_backup] This is already in memory\n{from_field}, {message_field}\n')
+            logger.error(
+                f'[Weaviate_utils/load_from_backup] This is already in memory\n{from_field}, {message_field}\n')
         except exceptions.SchemaValidationException:
             raise exceptions.SchemaValidationException
         else:
@@ -90,7 +91,7 @@ async def retrieve_all_objects(weaviate_db: WeaviateBase, limit=50):
     try:
         collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
         while True:
-            logger.info(f"[Weaviate_utils/retrieve_all_objects] Objects from {offset} to {offset+limit}")
+            logger.info(f"[Weaviate_utils/retrieve_all_objects] Objects from {offset} to {offset + limit}")
             response = await collection.query.fetch_objects(
                 sort=Sort.by_property(name="datetime", ascending=True),
                 limit=limit,
@@ -123,7 +124,8 @@ async def retrieve_all_objects(weaviate_db: WeaviateBase, limit=50):
 
 def convert_response_to_mem_chain(response, algo_name: Optional[str] = None) -> Optional[MemoryChain]:
     if not response:
-        logger.warning(f"[Weaviate_utils.py/convert_response_to_mem_chain] There are no similar elements in the response")
+        logger.warning(
+            f"[Weaviate_utils.py/convert_response_to_mem_chain] There are no similar elements in the response")
         return None
 
     sim_search = MemoryChain()
@@ -146,7 +148,7 @@ def convert_response_to_mem_chain(response, algo_name: Optional[str] = None) -> 
 
     if algo_name:
         logger.info(f"[Weaviate_utils.py/convert_response_to_mem_chain] Successfully made a memory chain of similar"
-                     f" messages using {algo_name}")
+                    f" messages using {algo_name}")
     else:
         logger.info(f"[Weaviate_utils.py/convert_response_to_mem_chain] Successfully made a memory chain")
     return sim_search
@@ -231,7 +233,8 @@ async def check_if_exists(weaviate_db: WeaviateBase, collection_name: str):
 
 
 async def create_collection(weaviate_db: WeaviateBase, collection_name: str):
-    assert not await check_if_exists(weaviate_db, collection_name), f"Collection({collection_name}) with given name already exists."
+    assert not await check_if_exists(weaviate_db,
+                                     collection_name), f"Collection({collection_name}) with given name already exists."
     new_collection_scheme = await weaviate_db.client.collections.create(
         name=collection_name,
         description="Message from Memory",
