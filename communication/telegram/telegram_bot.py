@@ -1,7 +1,4 @@
 import asyncio
-import signal
-
-from .. import BaseInterface
 from telegram import Update, InputFile, Voice
 from telegram.constants import ChatAction, ParseMode
 from telegram.ext import (Application,
@@ -13,8 +10,9 @@ from telegram.ext import (Application,
                           ApplicationHandlerStop,
                           TypeHandler,
                           )
+
 from .handlers import handle_message, send_message, error, help_command, start_command, whitelist_user
-from config import TelegramSettings, logger
+from . import BaseInterface,TelegramSettings, logger
 
 
 class TelegramInterface(BaseInterface):
