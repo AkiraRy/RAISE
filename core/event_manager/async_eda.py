@@ -1,9 +1,10 @@
 import asyncio
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Any, Coroutine, Type, Optional
+from typing import Callable, Dict, List, Any, Coroutine, Type
 from utils import Message
 from config import logger
+
 
 @dataclass
 class Topic:
@@ -18,6 +19,7 @@ class PubSub:
         self.pooling_delay = pooling_delay
         self.loop = asyncio.new_event_loop()
         self._thread = None
+        self.stop_event = asyncio.Event()
 
     def start(self):
         logger.info(f"[PubSub/start] Starting worker thread")
@@ -29,24 +31,48 @@ class PubSub:
         logger.info(f"[PubSub/_start_loop] Starting worker loop")
         """Set up the event loop to run in the thread."""
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self.start_working())
+        try:
+            self.loop.run_until_complete(self.start_working())
+        finally:
+            self.loop.close()
+            logger.info("[PubSub/_start_loop] Worker loop stopped and event loop closed")
 
     async def start_working(self) -> None:
         """Continuously check and process messages from topics."""
-        while True:
-            for topic, topic_data in self.channels.items():
-                if not topic_data.queue.empty():
-                    message = await topic_data.queue.get()
-                    listeners = topic_data.listeners
-                    await self._propagate_to_listeners(listeners, message)
-                    topic_data.queue.task_done()
-            await asyncio.sleep(self.pooling_delay)
+        logger.info("[PubSub/start_working] Entering main working loop")
+        try:
+            while not self.stop_event.is_set():  # Async check with asyncio.Event
+                for topic, topic_data in self.channels.items():
+                    if not topic_data.queue.empty():
+                        message = await topic_data.queue.get()
+                        listeners = topic_data.listeners
+                        await self._propagate_to_listeners(listeners, message)
+                        topic_data.queue.task_done()
+                await asyncio.sleep(self.pooling_delay)
+        except asyncio.CancelledError:
+            logger.info("[PubSub/start_working] Loop cancelled during shutdown")
+        finally:
+            logger.info("[PubSub/start_working] Exiting main working loop")
+
+    async def _shutdown(self):
+        """Set stop event and cancel remaining tasks to shut down the loop."""
+        self.stop_event.set()
+        # tasks = [t for t in asyncio.all_tasks(self.loop) if not t.done()]
+        # for task in tasks:
+        #     task.cancel()
+        # try:
+        #     await asyncio.gather(*tasks, return_exceptions=True)
+        # except Exception as e:
+        #     logger.warning(f"[PubSub/_shutdown] Exception during shutdown: {e}")
 
     def stop(self):
         logger.info(f"[PubSub/stop] Stopping PubSub system")
-        """Stop the event loop in the background thread."""
+        future = asyncio.run_coroutine_threadsafe(self._shutdown(), self.loop)  # Stop async tasks
+        future.result()
+        logger.info(f"[PubSub/stop] Stopping PubSub loop")
         self.loop.call_soon_threadsafe(self.loop.stop)
         if self._thread:
+            logger.info(f"[PubSub/stop] Stopping PubSub thread")
             self._thread.join()
 
     def subscribe(self, topic: str, handler: Callable[[Any], Coroutine]) -> None:
@@ -79,3 +105,4 @@ class PubSub:
 
             if not self.channels[topic].listeners:  # Remove topic if no subscribers remain
                 del self.channels[topic]
+                logger.info(f"[PubSub/unsubscribe] Topic '{topic}' removed due to no listeners")

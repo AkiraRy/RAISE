@@ -42,14 +42,19 @@ class Brain(metaclass=Singleton):
 
         # initialization
         self.memories: List[dict] = list()
-        self.initialize_memories()
         self.load_persona(persona_path)
         self.pubsub.subscribe(subscribe_to, self.process_message)
+
+    async def start(self):
+        self.load_model()
+        await self.initialize_memories()
 
     async def process_message(self, message: Message):
         if not self.is_loaded_model:
             logger.warning(f"[Brain/process_message] model is not loaded")
-            return # send here an message with error inside
+            message.response_message = f'Model({self.model.llm_settings.llm_model_name}) is not loaded.'
+            self.pubsub.publish(self.publish_to_topic, message)
+            return  # send here an message with error inside
 
         content = message.text_content.content
         logger.info(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
@@ -58,6 +63,7 @@ class Brain(metaclass=Singleton):
             'role': 'user',
             'content': content
         })
+        self.forget()
         logger.info(f"[Brain/process_message] Generating an llm response")
         response_content, usage, generation_time = self.model.generate(self.memories)
         self.memories.append({
@@ -71,12 +77,12 @@ class Brain(metaclass=Singleton):
 
     def close(self):
         if not self.model:
-            logger.warning("[Brain/load_model] no model to close connection for")
+            logger.warning("[Brain/close] no model to close connection for")
             return False
         self.model.llm.close()
         del self.model.llm
         self.model.llm = None
-        logger.info("[Brain/load_model] Successfully closed connection for model.")
+        logger.info("[Brain/close] Successfully closed connection for model.")
 
     def load_model(self):
         if not self.model.llm_settings:
@@ -105,17 +111,20 @@ class Brain(metaclass=Singleton):
         except IOError:
             logger.error(f"[Brain/load_persona] There was an error during handling the file {self.persona}")
         else:
-            logger.debug(f"[Brain/load_persona] Successfully loaded AI persona")
+            logger.info(f"[Brain/load_persona] Successfully loaded AI persona")
 
     async def initialize_memories(self) -> None:
         try:
             logger.info(f"[Brain/initialize_memories] Fetching chat memories")
             fetchedMemories: MemoryChain = await self.memory_manager.get_chat_memory()
         except Exception as e:
-            logger.error('[Brain/initialize_memories] Brain was damaged, could not remember anything {e}')
+            logger.error(f'[Brain/initialize_memories] Brain was damaged, could not remember anything {e}')
             return
 
-        for memory in fetchedMemories:
+        if not fetchedMemories:
+            logger.warning(f"[Brain/initialize_memories] Couldn't initialize memories. None were retrieved.")
+
+        for memory in fetchedMemories.memories:
             self.memories.append({
                 'role': 'user' if self.user_name == memory.from_name else 'assistant',
                 'content': memory.message
@@ -127,11 +136,12 @@ class Brain(metaclass=Singleton):
 
     def forget(self) -> int:
         """returns total number of tokens at the end"""
-        logger.info(f"Brain/fulfill_prompt] Forgetting last message in the chat history")
         prompt = self.model.format_prompt(self.memories)
         curr_total_tokens = self.model.count_tokens(prompt)
 
         while curr_total_tokens > self.token_limit:
+            logger.info(
+                f"Brain/forget] Forgetting last message in the chat history. Current lengths of memories {len(self.memories)}")
             self.memories.pop(1)
             prompt = self.model.format_prompt(self.memories)
             curr_total_tokens = self.model.count_tokens(prompt)

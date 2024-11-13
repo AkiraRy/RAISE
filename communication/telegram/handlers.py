@@ -63,7 +63,8 @@ async def handle_message(update: Update, context: CallbackContext):
     logger.info(f"[Telegram/handle_message] Sending processed message class to pubsub.")
     pubsub.publish(topic, telegram_message)
 
-    asyncio.create_task(context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING))
+    # asyncio.create_task(context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING))
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):

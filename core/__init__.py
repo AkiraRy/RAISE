@@ -5,5 +5,5 @@ from .brain.main import Brain, Model
 from .event_manager.async_eda import PubSub
 
 import warnings
-warnings.filterwarnings("ignore", category=ResourceWarning)
+# warnings.filterwarnings("ignore", category=ResourceWarning)
 

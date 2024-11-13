@@ -43,7 +43,6 @@ class TelegramInterface(BaseInterface):
 
     def initialize(self):
         logger.info(f"[TelegramInterface/initialize] Initialization of telegram handlers.")
-        self.manage_event_loop()
         filter_users = TypeHandler(Update, whitelist_user)
         self.app.add_handler(filter_users, -1)
 

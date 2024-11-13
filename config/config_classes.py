@@ -268,7 +268,7 @@ class SettingsManager:
             llm_type = self.config.llm_type
 
         llm_settings_path = LLM_SETTINGS_DIR / f"{llm_type}.yaml"
-        logger.debug(f"[SettingsManager/load_llm_settings] Loading LLM settings from: {llm_settings_path}")
+        logger.info(f"[SettingsManager/load_llm_settings] Loading LLM settings from: {llm_settings_path}")
         if not llm_settings_path.exists():
             logger.error(f"[SettingsManager/load_llm_settings] LLM settings file '{self.config.llm_type}.yaml' not found in {LLM_SETTINGS_DIR}.")
             raise FileNotFoundError(f"LLM settings file '{self.config.llm_type}.yaml' not found.")
