@@ -42,6 +42,7 @@ class Brain(metaclass=Singleton):
 
         # initialization
         self.memories: List[dict] = list()
+        self.initialize_memories()
         self.load_persona(persona_path)
         self.pubsub.subscribe(subscribe_to, self.process_message)
 
@@ -106,12 +107,12 @@ class Brain(metaclass=Singleton):
         else:
             logger.debug(f"[Brain/load_persona] Successfully loaded AI persona")
 
-    async def fulfill_prompt(self) -> Optional[List[dict]]:
+    async def initialize_memories(self) -> None:
         try:
-            logger.info(f"[Brain/fulfill_prompt] Fetching chat memories")
+            logger.info(f"[Brain/initialize_memories] Fetching chat memories")
             fetchedMemories: MemoryChain = await self.memory_manager.get_chat_memory()
         except Exception as e:
-            logger.error('[Brain/fulfill_prompt] Brain was damaged, could not remember anything {e}')
+            logger.error('[Brain/initialize_memories] Brain was damaged, could not remember anything {e}')
             return
 
         for memory in fetchedMemories:
@@ -121,8 +122,8 @@ class Brain(metaclass=Singleton):
             })
 
         curr_tokens_amount = self.forget()  # forgets last message in a chat history if necessary
-        logger.info(f"[Brain/fulfill_prompt] Current total number of tokens is {curr_tokens_amount}")
-        return self.memories
+        logger.info(f"[Brain/initialize_memories] Current total number of tokens is {curr_tokens_amount}")
+        logger.info(f"[Brain/initialize_memories] Successfully initialized memories.")
 
     def forget(self) -> int:
         """returns total number of tokens at the end"""
@@ -135,3 +136,5 @@ class Brain(metaclass=Singleton):
             prompt = self.model.format_prompt(self.memories)
             curr_total_tokens = self.model.count_tokens(prompt)
         return curr_total_tokens
+
+
