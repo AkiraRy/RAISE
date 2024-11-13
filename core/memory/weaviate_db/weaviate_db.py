@@ -21,12 +21,18 @@ class Weaviate(WeaviateBase):
     def __init__(self, settings: 'WeaviateSettings'):
         super().__init__(settings)
 
-    async def add_memories(self, memory_chain: MemoryChain) -> int:
+    async def is_alive(self) -> bool:
+        if self.client and await self.client.is_live():
+            return True
+        logger.error(f"[Weaviate/is_alive] Connection is closed.")
+        return False
+
+    async def add_memories(self, memory_chain: MemoryChain) -> bool:
         logger.error(f"[Weaviate/add_memories] Starting to add memories {memory_chain}")
 
-        if not self.client or not await self.client.is_live():
+        if not await self.is_alive():
             logger.error(f"[Weaviate/add_memories] Connection is closed. Cannot add memories")
-            return -1
+            return False
 
         collection = self.client.collections.get(self.config.class_name)
 
@@ -40,15 +46,15 @@ class Weaviate(WeaviateBase):
                 logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
         except UnexpectedStatusCodeError as e:
             logger.error(f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters {e}")
-            return -1
+            return False
         else:
             logger.info(f"[Weaviate/add_memories] Memory chain added successfully")
-            return 0
+            return True
 
     async def get_context(self, query: str) -> Optional[MemoryChain]:
         logger.info(f"[Weaviate/get_chat_memory] getting context(sim_search) for {query}")
         # returns n similar messages texted by user to the query
-        if not self.client or not await self.client.is_live():
+        if not await self.is_alive():
             logger.error(f"[Weaviate/get_context] Connection is closed. Cannot get context")
             return None
 
@@ -57,11 +63,16 @@ class Weaviate(WeaviateBase):
 
         if not memory_chain:
             logger.info(f"[Weaviate/get_chat_memory] There is no similar messages to {query}")
+            return None
 
         logger.info(f"[Weaviate/get_chat_memory] Successfully got context for query {query}")
         return memory_chain
 
     async def get_chat_memory(self, limit_messages=20) -> Optional[MemoryChain]:
+        if not await self.is_alive():
+            logger.error(f"[Weaviate/get_chat_memory] Connection is closed. Cannot get chat memory")
+            return None
+
         # returns last n messages, n counts for both the user and an AI
         logger.info(f"[Weaviate/get_chat_memory] getting chat history for {limit_messages} messages")
         try:

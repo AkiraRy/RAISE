@@ -9,3 +9,5 @@ __pycache__
 assets/TODO.md
 *.txt
 *.yaml
+*.json
+*.gguf
