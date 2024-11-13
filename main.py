@@ -1,10 +1,8 @@
 import asyncio
 import os
 from config import SettingsManager, logger
-from core import Weaviate,  Async_DB_Interface, Brain, Model
+from core import Weaviate,  Async_DB_Interface, Brain, Model, PubSub
 from communication import TelegramInterface, BaseInterface
-import warnings
-warnings.filterwarnings("ignore", category=ResourceWarning)
 
 
 class AIAssistant:
@@ -38,16 +36,24 @@ async def main():
 
     telegram_settings = settings_manager.config.telegram
     model = Model(settings_manager.config.llm)
-
+    pubsub_system = PubSub(pooling_delay=0.1)
     brain = Brain(memory_manager=Weaviate_db,
                   model=model,
                   persona_path=settings_manager.config.persona,
                   user_name=telegram_settings.creator_username,
-                  assistant_name=telegram_settings.bot_nickname
-                  )
+                  assistant_name=telegram_settings.bot_nickname,
+                  pubsub=pubsub_system,
+                  publish_to_topic=settings_manager.config.pubsub.processed_message_topic,
+                  receive_topic=settings_manager.config.pubsub.input_message_topic)
     print(brain.persona)
 
-    tg_interface = TelegramInterface(token, telegram_settings, stop_queue)
+    tg_interface = TelegramInterface(token=token,
+                                     config=telegram_settings,
+                                     stop_queue=stop_queue,
+                                     pubsub=pubsub_system,
+                                     publish_to=settings_manager.config.pubsub.input_message_topic,
+                                     subscribe_to=settings_manager.config.pubsub.processed_message_topic)
+    pubsub_system.start()
     ai = AIAssistant(settings_manager, tg_interface, Weaviate_db, brain)
 
     await ai.start()

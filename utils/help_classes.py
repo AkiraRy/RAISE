@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from telegram.ext import CallbackContext
 from typing import Optional
 
 from telegram import Update
@@ -26,7 +27,10 @@ class Message:
     photo_message: Optional[PhotoMessage] = field(default=None)
     voice_message: Optional[VoiceMessage] = field(default=None)
 
+    response_message: Optional[str] = None
+
 
 @dataclass
 class TelegramMessage(Message):
     update: Update = field(default=None)
+    context: CallbackContext = field(default=None)

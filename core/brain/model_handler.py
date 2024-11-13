@@ -81,6 +81,7 @@ class Model:
         return response_content, usage, generation_time
 
     def generate(self, prompt: List[dict]):
+        print(prompt)
         if self.llm_settings.local:
             logger.info(f'[Brain/generate] Proceeding generate text locally')
             return self._generate_local(prompt)

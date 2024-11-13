@@ -1,8 +1,9 @@
-from typing import Optional, List, Union
+import asyncio
+from typing import Optional, List
 from . import logger, PROFILES_DIR
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
-
+from utils import Message
 
 class Singleton(type):
     _instances = {}
@@ -14,19 +15,58 @@ class Singleton(type):
 
 
 class Brain(metaclass=Singleton):
-    def __init__(self, memory_manager: 'Async_DB_Interface', model: Model, persona_path: str, user_name: str, assistant_name: str, token_limit: int = 2000):
+    def __init__(self, memory_manager: 'Async_DB_Interface',
+                 model: Model,
+                 persona_path: str,
+                 user_name: str,
+                 assistant_name: str,
+                 pubsub: 'PubSub',
+                 receive_topic: str,
+                 publish_to_topic: str,
+                 token_limit: int = 2000
+                 ):
         # memory_manager - db instance, persona - name of the file where persona is stored
         # Important classes
         self.memory_manager: 'Async_DB_Interface' = memory_manager
         self.model: Model = model
+        self.pubsub: 'PubSub' = pubsub
 
         # Config
         self.persona: Optional[str] = None
-        self.memories = list()
-        self.user_name = user_name
-        self.assistant_name = assistant_name
-        self.token_limit = token_limit
+        self.user_name: str = user_name
+        self.assistant_name: str = assistant_name
+        self.token_limit: int = token_limit
+        self.receive_topic: str = receive_topic
+        self.publish_to_topic: str = publish_to_topic
+        self.is_loaded_model: bool = False
+
+        # initialization
+        self.memories: List[dict] = list()
         self.load_persona(persona_path)
+        self.pubsub.subscribe(receive_topic, self.process_message)
+
+    async def process_message(self, message: Message):
+        if not self.is_loaded_model:
+            logger.warning(f"[Brain/process_message] model is not loaded")
+            return
+
+        content = message.text_message.content
+        logger.info(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
+
+        self.memories.append({
+            'role': 'user',
+            'content': content
+        })
+        logger.info(f"[Brain/process_message] Generating an llm response")
+        response_content, usage, generation_time = self.model.generate(self.memories)
+        self.memories.append({
+            'role': 'assistant',
+            'content': response_content.content
+        })
+        logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
+
+        message.response_message = response_content.message
+        self.pubsub.publish(self.publish_to_topic, message)
 
     def close(self):
         if not self.model:
@@ -41,7 +81,10 @@ class Brain(metaclass=Singleton):
         if not self.model.llm_settings:
             logger.error("[Brain/load_model] No settings in the model.")
             return False
-        return self.model.load_model()
+
+        is_loaded = self.model.load_model()
+        self.is_loaded_model = is_loaded
+        return is_loaded
 
     def load_persona(self, persona_path) -> None:
         try:
@@ -73,7 +116,7 @@ class Brain(metaclass=Singleton):
 
         for memory in fetchedMemories:
             self.memories.append({
-                'role': self.user_name if self.user_name == memory.from_name else self.assistant_name,
+                'role': 'user' if self.user_name == memory.from_name else 'assistant',
                 'content': memory.message
             })
 
