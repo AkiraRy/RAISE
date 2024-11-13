@@ -65,7 +65,7 @@ class Brain(metaclass=Singleton):
         })
         logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
 
-        message.response_message = response_content.message
+        message.response_message = response_content.content
         self.pubsub.publish(self.publish_to_topic, message)
 
     def close(self):

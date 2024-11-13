@@ -1,3 +1,5 @@
+import asyncio
+
 from utils import TextMessage, TelegramMessage
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
@@ -30,10 +32,13 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error(f'[error] USER({update.message.chat.id}) in {update.message.chat.type}: {context.error} from {update}')
 
 
-async def send_message(message: TelegramMessage):
+async def send_message_from_pubsub(message: TelegramMessage):
     # We will get this object form PUBSUB
-    content = message.response_message['content']
-    await message.update.message.reply_text(content)
+    try:
+        content = message.response_message
+        await message.update.message.reply_text(content)
+    except Exception as e:
+        logger.error(f"[Telegram/send_message_from_pubsub] Unexpectedly got an error {e}")
 
 
 async def handle_message(update: Update, context: CallbackContext):
@@ -58,8 +63,7 @@ async def handle_message(update: Update, context: CallbackContext):
     logger.info(f"[Telegram/handle_message] Sending processed message class to pubsub.")
     pubsub.publish(topic, telegram_message)
 
-    # for 5 sec action
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+    asyncio.create_task(context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING))
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):

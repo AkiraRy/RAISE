@@ -7,7 +7,7 @@ from telegram.ext import (Application,
                           TypeHandler,
                           )
 
-from .handlers import handle_message, send_message, error_handler, help_command, start_command, whitelist_user
+from .handlers import handle_message, send_message_from_pubsub, error_handler, help_command, start_command, whitelist_user
 from . import BaseInterface, TelegramSettings, logger
 
 
@@ -38,7 +38,7 @@ class TelegramInterface(BaseInterface):
 
         self.job_queue = self.app.job_queue
         logger.info(f'[TelegramInterface/__init__] Subscribed to {self.subscribe_to}')
-        self.pubsub.subscribe(self.subscribe_to, send_message)
+        self.pubsub.subscribe(self.subscribe_to, send_message_from_pubsub)
         # self.job_queue.run_repeating()
 
     def initialize(self):
