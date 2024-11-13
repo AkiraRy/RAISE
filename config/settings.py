@@ -52,7 +52,7 @@ LOGGING_CONFIG = {
     "loggers": {
         "bot": {
             'handlers': ['console'],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False
         },
         # "telegram": {

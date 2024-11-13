@@ -1,9 +1,9 @@
-import asyncio
 from typing import Optional, List
 from . import logger, PROFILES_DIR
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
 from utils import Message
+
 
 class Singleton(type):
     _instances = {}
@@ -21,8 +21,8 @@ class Brain(metaclass=Singleton):
                  user_name: str,
                  assistant_name: str,
                  pubsub: 'PubSub',
-                 receive_topic: str,
-                 publish_to_topic: str,
+                 subscribe_to: str,
+                 publish_to: str,
                  token_limit: int = 2000
                  ):
         # memory_manager - db instance, persona - name of the file where persona is stored
@@ -36,21 +36,21 @@ class Brain(metaclass=Singleton):
         self.user_name: str = user_name
         self.assistant_name: str = assistant_name
         self.token_limit: int = token_limit
-        self.receive_topic: str = receive_topic
-        self.publish_to_topic: str = publish_to_topic
+        self.receive_topic: str = subscribe_to
+        self.publish_to_topic: str = publish_to
         self.is_loaded_model: bool = False
 
         # initialization
         self.memories: List[dict] = list()
         self.load_persona(persona_path)
-        self.pubsub.subscribe(receive_topic, self.process_message)
+        self.pubsub.subscribe(subscribe_to, self.process_message)
 
     async def process_message(self, message: Message):
         if not self.is_loaded_model:
             logger.warning(f"[Brain/process_message] model is not loaded")
-            return
+            return # send here an message with error inside
 
-        content = message.text_message.content
+        content = message.text_content.content
         logger.info(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
 
         self.memories.append({
@@ -104,7 +104,7 @@ class Brain(metaclass=Singleton):
         except IOError:
             logger.error(f"[Brain/load_persona] There was an error during handling the file {self.persona}")
         else:
-            logger.info(f"[Brain/load_persona] Successfully loaded AI persona")
+            logger.debug(f"[Brain/load_persona] Successfully loaded AI persona")
 
     async def fulfill_prompt(self) -> Optional[List[dict]]:
         try:

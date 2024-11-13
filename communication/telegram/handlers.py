@@ -1,6 +1,7 @@
 from utils import TextMessage, TelegramMessage
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
+from telegram.constants import ChatAction, ParseMode
 
 from . import logger
 
@@ -24,35 +25,46 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('help')
 
 
-async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # it is still kinda same update, but i have no idea why they changed it to object
     logger.error(f'[error] USER({update.message.chat.id}) in {update.message.chat.type}: {context.error} from {update}')
-
-def func():
-    print(3)
 
 
 async def send_message(message: TelegramMessage):
+    # We will get this object form PUBSUB
     content = message.response_message['content']
     await message.update.message.reply_text(content)
 
 
 async def handle_message(update: Update, context: CallbackContext):
-    # add here preprocessing of the image so on so on
-
     pubsub = context.bot_data['pubsub']
     topic = context.bot_data['publish_to']
 
-    user_input = update.message.text
-    msg_cls = TelegramMessage(update.message.id, text_message=TextMessage(user_input), update=update, context=context)
+    sender = update.message.from_user
+    sender_full_name = sender.full_name
+    message_from_user = update.message.text
+    datetime_msg = update.message.date.isoformat()
+    # add library or regex to filter out emojis
 
-    pubsub.publish(topic, msg_cls)
-    # This is where you can connect to the assistant core
-    response = f"You said: {user_input}"
+    logger.info(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
+    telegram_message = TelegramMessage(
+        id=update.message.id,
+        from_user=sender_full_name,
+        datetime=datetime_msg,
+        text_content=TextMessage(message_from_user),
+        update=update,
+        context=context
+    )
+    logger.info(f"[Telegram/handle_message] Sending processed message class to pubsub.")
+    pubsub.publish(topic, telegram_message)
 
-    # timer = threading.Timer(3, func)
-    # timer.start()
-    # await update.message.reply_text(response)
+    # for 5 sec action
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+    raise NotImplemented
+
+
+async def handle_files(*args, **kwargs):
+    raise NotImplemented
