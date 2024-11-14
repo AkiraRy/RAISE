@@ -74,10 +74,12 @@ class Brain(metaclass=Singleton):
             'content': content
         })
         # 1.1 checking if we use more tokens than allowed in prompt
-        self.forget()
+        curr_token = self.forget()
+        logger.info(f"[Brain/process_message] Current total number of tokens is {curr_token}")
 
         # 2. Response generation
         logger.info(f"[Brain/process_message] Generating an llm response")
+        logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
         response_content, usage, generation_time = self.model.generate(self.memories)
 
         self.memories.append({
@@ -172,6 +174,7 @@ class Brain(metaclass=Singleton):
     def forget(self) -> int:
         """returns total number of tokens at the end"""
         prompt = self.model.format_prompt(self.memories)
+        logger.debug(f"[Brain/forget] prompt after formatting: {prompt}")
         curr_total_tokens = self.model.count_tokens(prompt)
 
         while curr_total_tokens > self.token_limit:

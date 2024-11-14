@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional, List, Union
 
 from llama_cpp import Llama
-from llama_cpp.llama_chat_format import format_mistral_instruct
+from llama_cpp.llama_chat_format import format_mistral_instruct, format_llama2
 
 from . import LLMSettings, logger, MODEL_DIR, ResponseContent, Usage
 
@@ -91,6 +91,8 @@ class Model:
     def format_prompt(self, messages: List[dict]):
         if self.llm_settings.chat_format == 'mistral-instruct':
             return format_mistral_instruct(messages).prompt
+        if self.llm_settings.chat_format == 'llama-2':
+            return format_llama2(messages).prompt
         raise NotImplemented
 
     def count_tokens(self, prompt: str) -> int:
