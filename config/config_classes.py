@@ -148,6 +148,8 @@ class Config(BaseSettings):
     pubsub: Optional[PubSubSettings] = None
     llm_type: str = None
     persona: str = "default_persona"
+    use_memories: bool = False
+    save_memories: bool = False
 
     # plugins: Dict[str, PluginSettings] = field(default_factory=dict)
     # def validate(self):
@@ -191,6 +193,10 @@ class SettingsManager:
 
                 self.config.llm_type = data.get('llm_type', 'default')
                 self.config.persona = data.get("persona", "default_persona")
+                self.config.use_memories = data.get("use_memories", False)
+                self.config.save_memories = data.get("save_memories", False)
+
+
                 self.load_llm_settings()
                 # self.config.validate()
                 logger.info("[SettingsManager/load_settings] Settings loaded successfully.")
@@ -246,6 +252,9 @@ class SettingsManager:
 
         # all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
         all_settings['llm_type'] = self.config.llm_type
+        all_settings['persona'] = self.config.persona
+        all_settings['use_memories'] = self.config.use_memories
+        all_settings['save_memories'] = self.config.save_memories
 
         try:
             logger.info(f"[SettingsManager/save_settings] Trying to save settings to {self.yaml_path}")

@@ -23,6 +23,8 @@ class Brain(metaclass=Singleton):
                  pubsub: 'PubSub',
                  subscribe_to: str,
                  publish_to: str,
+                 use_memories: bool,
+                 save_memories: bool,
                  token_limit: int = 2000
                  ):
         # memory_manager - db instance, persona - name of the file where persona is stored
@@ -38,6 +40,8 @@ class Brain(metaclass=Singleton):
         self.token_limit: int = token_limit
         self.receive_topic: str = subscribe_to
         self.publish_to_topic: str = publish_to
+        self.use_memories: bool = use_memories
+        self.save_memories = save_memories
         self.is_loaded_model: bool = False
 
         # initialization
@@ -47,7 +51,11 @@ class Brain(metaclass=Singleton):
 
     async def start(self):
         self.load_model()
-        await self.initialize_memories()
+        if self.use_memories:
+            logger.info(f"[Brain/start] initializing chat data/memories")
+            await self.initialize_memories()
+            return
+        logger.info(f"[Brain/start] Not using chat data/memories")
 
     async def process_message(self, message: Message):
         if not self.is_loaded_model:

@@ -24,7 +24,7 @@ class AIAssistant:
         logger.info(f'[AIAssistant/start] stopping the Application.')
         await self.database.close()
         self.brain.close()
-
+        logger.info(f'[AIAssistant/start] Application stopped successfully')
 
 
 async def main():
@@ -42,7 +42,9 @@ async def main():
         assistant_name=telegram_settings.bot_nickname,
         pubsub=pubsub_system,
         publish_to=settings_manager.config.pubsub.processed_message_topic,
-        subscribe_to=settings_manager.config.pubsub.input_message_topic
+        subscribe_to=settings_manager.config.pubsub.input_message_topic,
+        save_memories=settings_manager.config.save_memories,
+        use_memories=settings_manager.config.use_memories
     )
 
     tg_interface = TelegramInterface(
