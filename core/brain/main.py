@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, List
 from . import logger, PROFILES_DIR
 from ..memory import MemoryChain, Async_DB_Interface
@@ -59,11 +60,12 @@ class Brain(metaclass=Singleton):
 
     async def process_message(self, message: Message):
         if not self.is_loaded_model:
-            logger.warning(f"[Brain/process_message] model is not loaded")
+            logger.warning(f"[Brain/process_message] Model({self.model.llm_settings.llm_model_name}) is not loaded")
             message.response_message = f'Model({self.model.llm_settings.llm_model_name}) is not loaded.'
             self.pubsub.publish(self.publish_to_topic, message)
             return  # send here an message with error inside
 
+        # 1. Getting current memories with user input
         content = message.text_content.content
         logger.info(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
 
@@ -71,14 +73,39 @@ class Brain(metaclass=Singleton):
             'role': 'user',
             'content': content
         })
+        # 1.1 checking if we use more tokens than allowed in prompt
         self.forget()
+
+        # 2. Response generation
         logger.info(f"[Brain/process_message] Generating an llm response")
         response_content, usage, generation_time = self.model.generate(self.memories)
+
         self.memories.append({
             'role': 'assistant',
             'content': response_content.content
         })
+
+        # saving to memory (optional)
         logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
+
+        if self.save_memories:
+            logger.info("[Brain/process_message] saving memories.")
+            mem_chain = MemoryChain()
+            mem_chain.add_object(
+                from_name=message.from_user,
+                message=content,
+                time=message.datetime  # DO SOMETHING?
+            )
+            mem_chain.add_object(
+                from_name=self.assistant_name,
+                message=response_content.content,
+                time=datetime.datetime.now()
+            )
+            await self.memory_manager.add_memories(memory_chain=mem_chain)
+
+        if not self.use_memories:
+            logger.info(f"[Brain/process_message] clearing chat info from context")
+            self.memories = self.memories[:1]  # we only leave our persona
 
         message.response_message = response_content.content
         self.pubsub.publish(self.publish_to_topic, message)

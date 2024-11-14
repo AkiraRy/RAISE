@@ -53,7 +53,7 @@ class Async_DB_Interface(ABC):
         pass
 
     @abstractmethod
-    async def add_memories(self, memory: Memory):
+    async def add_memories(self, memory_chain: MemoryChain) -> bool:
         pass
 
     @abstractmethod

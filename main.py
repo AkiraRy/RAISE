@@ -21,10 +21,10 @@ class AIAssistant:
         logger.info(f'[AIAssistant/start] Application is ready to use.')
 
     async def stop(self):
-        logger.info(f'[AIAssistant/start] stopping the Application.')
+        logger.info(f'[AIAssistant/stop] stopping the Application.')
         await self.database.close()
         self.brain.close()
-        logger.info(f'[AIAssistant/start] Application stopped successfully')
+        logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
 
 async def main():

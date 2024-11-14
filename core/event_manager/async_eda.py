@@ -33,6 +33,8 @@ class PubSub:
         asyncio.set_event_loop(self.loop)
         try:
             self.loop.run_until_complete(self.start_working())
+        except RuntimeError:
+            logger.info("[PubSub/_start_loop] Event loop stopped before Future completed.")
         finally:
             self.loop.close()
             logger.info("[PubSub/_start_loop] Worker loop stopped and event loop closed")
@@ -50,12 +52,13 @@ class PubSub:
                         topic_data.queue.task_done()
                 await asyncio.sleep(self.pooling_delay)
         except asyncio.CancelledError:
-            logger.info("[PubSub/start_working] Loop cancelled during shutdown")
+            logger.error("[PubSub/start_working] Loop cancelled during shutdown")
+        except RuntimeError:
+            logger.error("[PubSub/start_working] Event loop stopped before Future completed.")
         finally:
             logger.info("[PubSub/start_working] Exiting main working loop")
 
     async def _shutdown(self):
-        """Set stop event and cancel remaining tasks to shut down the loop."""
         self.stop_event.set()
         # tasks = [t for t in asyncio.all_tasks(self.loop) if not t.done()]
         # for task in tasks:

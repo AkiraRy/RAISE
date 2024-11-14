@@ -51,7 +51,7 @@ async def handle_message(update: Update, context: CallbackContext):
     datetime_msg = update.message.date.isoformat()
     # add library or regex to filter out emojis
 
-    logger.info(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
+    logger.debug(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
     telegram_message = TelegramMessage(
         id=update.message.id,
         from_user=sender_full_name,
