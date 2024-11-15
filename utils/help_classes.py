@@ -24,7 +24,7 @@ class VoiceMessage:
 class Message:
     id: int
     from_user: str
-    datetime: str
+    datetime: datetime
 
     text_content: Optional[TextMessage] = field(default=None)
     photo_content: Optional[PhotoMessage] = field(default=None)

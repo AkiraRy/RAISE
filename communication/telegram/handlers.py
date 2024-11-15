@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 
 from utils import TextMessage, TelegramMessage
 from telegram import Update, constants
@@ -48,7 +49,8 @@ async def handle_message(update: Update, context: CallbackContext):
     sender = update.message.from_user
     sender_full_name = sender.full_name
     message_from_user = update.message.text
-    datetime_msg = update.message.date.isoformat()
+    now = datetime.datetime.now()
+    datetime_msg = datetime.datetime.now().astimezone()
     # add library or regex to filter out emojis
 
     logger.debug(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")

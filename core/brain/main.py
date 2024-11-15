@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 from typing import Optional, List
 from . import logger, PROFILES_DIR
@@ -102,7 +103,7 @@ class Brain(metaclass=Singleton):
             mem_chain.add_object(
                 from_name=self.assistant_name,
                 message=response_content.content,
-                time=datetime.datetime.now()
+                time=datetime.datetime.now().astimezone()
             )
             await self.memory_manager.add_memories(memory_chain=mem_chain)
 
