@@ -96,7 +96,7 @@ class Model:
 
     def format_prompt(self, messages: List[dict], add_generation_prompt=False):
         if not self.prompt_template:
-            raise NotImplemented
+            raise NotImplementedError
 
         template = Template(self.prompt_template)
 
@@ -126,7 +126,7 @@ class Model:
         try:
             with open(prompt_template_path, 'r') as file:
                 yaml_data = yaml.safe_load(file)
-                self.prompt_template_name = yaml_data['instruction_template']
+                self.prompt_template = yaml_data['instruction_template']
         except Exception as e:
             logger.error(f"[Brain/load_prompt_template] Failed to load prompt_template at {prompt_template_path}, reason: {e}")
             return False
