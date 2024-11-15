@@ -6,6 +6,7 @@ from .model_handler import Model
 from utils import Message
 
 
+# add context search
 class Singleton(type):
     _instances = {}
 
@@ -135,7 +136,7 @@ class Brain(metaclass=Singleton):
             path = PROFILES_DIR / f"{persona_path}.txt"
             logger.info(f"[Brain/load_persona] Trying to load AI Persona from file at {path}")
 
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
 
             self.persona = ''.join(lines)

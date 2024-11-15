@@ -5,7 +5,6 @@ from typing import Optional, List, Union
 
 from jinja2 import Template
 from llama_cpp import Llama
-from llama_cpp.llama_chat_format import format_mistral_instruct, format_llama2
 
 from . import LLMSettings, logger, MODEL_DIR, ResponseContent, Usage, PROMPT_TEMPLATES_DIR
 
@@ -57,12 +56,8 @@ class Model:
         raise NotImplemented
 
     def _generate_local(self, messages: List[dict]):
-        # add folder for templates in assets
-        # in the format_prompt make if statements or similar thing to choose correct template and apply it
-        # after that push to GitHub
-
         stat_time = datetime.now()
-        formatted_prompt = custom_jinja_formatter(messages=messages, add_generation_prompt=False)
+        formatted_prompt = self.format_prompt(messages)
 
         response = self.llm.create_completion(
             prompt=formatted_prompt,
@@ -91,20 +86,23 @@ class Model:
 
         return response_content, usage, generation_time
 
-    def generate(self, prompt: List[dict]):
-        logger.debug(f"[Model/generate] prompt for generation {prompt}")
+    def generate(self, messages: List[dict]):
+        logger.debug(f"[Model/generate] prompt for generation {messages}")
         if self.llm_settings.local:
             logger.info(f'[Brain/generate] Proceeding generate text locally')
-            return self._generate_local(prompt)
+            return self._generate_local(messages)
         logger.info(f'[Brain/generate] Proceeding to generate text remotely')
-        return self._generate_remote(prompt)
+        return self._generate_remote(messages)
 
-    def format_prompt(self, messages: List[dict]):
-        if self.llm_settings.chat_format == 'mistral-instruct':
-            return format_mistral_instruct(messages).prompt
-        if self.llm_settings.chat_format == 'llama-2':
-            return format_llama2(messages).prompt
-        raise NotImplemented
+    def format_prompt(self, messages: List[dict], add_generation_prompt=False):
+        if not self.prompt_template:
+            raise NotImplemented
+
+        template = Template(self.prompt_template)
+
+        # Render the template with provided messages and add_generation_prompt flag
+        formatted_prompt = template.render(messages=messages, add_generation_prompt=add_generation_prompt)
+        return formatted_prompt
 
     def count_tokens(self, prompt: str) -> int:
         if self.llm_settings.local:
