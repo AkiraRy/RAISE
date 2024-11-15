@@ -1,6 +1,12 @@
 from typing import Optional, Literal
 from dataclasses import dataclass
-from config import PROFILES_DIR, logger, LLMSettings, MODEL_DIR, SettingsManager, LLM_SETTINGS_DIR
+from config import (PROFILES_DIR,
+                    logger,
+                    LLMSettings,
+                    MODEL_DIR,
+                    SettingsManager,
+                    LLM_SETTINGS_DIR,
+                    PROMPT_TEMPLATES_DIR)
 
 
 @dataclass
@@ -11,9 +17,8 @@ class PromptMessage:
 
 @dataclass
 class ResponseContent:
-    message: dict[str, str]
     content: str
-    finish_reason: Optional[Literal["stop", "length"]]
+    finish_reason: Optional[str]
 
 
 @dataclass

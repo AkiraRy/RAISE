@@ -1,17 +1,22 @@
+import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Union
 
+from jinja2 import Template
 from llama_cpp import Llama
 from llama_cpp.llama_chat_format import format_mistral_instruct, format_llama2
 
-from . import LLMSettings, logger, MODEL_DIR, ResponseContent, Usage
+from . import LLMSettings, logger, MODEL_DIR, ResponseContent, Usage, PROMPT_TEMPLATES_DIR
 
 
 class Model:
     def __init__(self, llm_settings: LLMSettings):
         self.llm_settings = llm_settings
         self.llm: Optional[Union['Llama', str]] = None
+        self.prompt_template_name = self.llm_settings.chat_format
+        self.prompt_template = None
+        self.load_prompt_template()
 
     def load_model(self):
         if self.llm_settings.local:
@@ -34,8 +39,9 @@ class Model:
                              n_gpu_layers=self.llm_settings.n_gpu_layers,
                              n_ctx=self.llm_settings.n_ctx,
                              n_batch=self.llm_settings.n_batch,
-                             chat_format=self.llm_settings.chat_format,
+                             # chat_format=self.llm_settings.chat_format,
                              verbose=self.llm_settings.verbose)
+            print(self.llm.metadata)
         except Exception as e:
             logger.error(f"[Brain/load_model_local] Failed to load model at {model_path}, reason: {e}")
             return False
@@ -51,9 +57,15 @@ class Model:
         raise NotImplemented
 
     def _generate_local(self, messages: List[dict]):
+        # add folder for templates in assets
+        # in the format_prompt make if statements or similar thing to choose correct template and apply it
+        # after that push to GitHub
+
         stat_time = datetime.now()
-        response = self.llm.create_chat_completion(
-            messages=messages,
+        formatted_prompt = custom_jinja_formatter(messages=messages, add_generation_prompt=False)
+
+        response = self.llm.create_completion(
+            prompt=formatted_prompt,
             temperature=self.llm_settings.temperature,
             top_p=self.llm_settings.top_p,
             top_k=self.llm_settings.top_k,
@@ -68,11 +80,10 @@ class Model:
         end_time = datetime.now()
         generation_time = int((end_time - stat_time).total_seconds())
 
-        created = response['created']  # unix time
+        # created = response['created']  # unix time
         choices = response['choices'][0]
         response_content = ResponseContent(
-            message=choices['message'],
-            content=choices['message']['content'],
+            content=choices['text'],
             finish_reason=choices['finish_reason']
         )
         usage = Usage(**response['usage'])
@@ -105,3 +116,22 @@ class Model:
 
     def _count_tokens_remote(self, prompt):
         raise NotImplemented
+
+    def load_prompt_template(self):
+        logger.info(f"[Brain/load_prompt_template] Trying to load prompt_template: {self.prompt_template_name}")
+        prompt_template_path = PROMPT_TEMPLATES_DIR / f"{self.prompt_template_name}.yaml"
+
+        if not Path.exists(prompt_template_path):
+            logger.error(f"[Brain/load_prompt_template] There is no prompt_template at {prompt_template_path}")
+            raise FileNotFoundError(f"No prompt_template at {prompt_template_path}")
+
+        try:
+            with open(prompt_template_path, 'r') as file:
+                yaml_data = yaml.safe_load(file)
+                self.prompt_template_name = yaml_data['instruction_template']
+        except Exception as e:
+            logger.error(f"[Brain/load_prompt_template] Failed to load prompt_template at {prompt_template_path}, reason: {e}")
+            return False
+        else:
+            logger.debug(f"[Brain/load_prompt_template] Prompt_template {self.prompt_template_name} loaded successfully")
+            return True

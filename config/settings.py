@@ -9,14 +9,17 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).parent.parent
 
+# Settings
 CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
 LLM_SETTINGS_DIR = CONFIG_DIR / "llm_settings"
 DEFAULT_SETTINGS_DIR = PROFILES_DIR / "settings.yaml"
 
+# Assets
 ASSETS_DIR = BASE_DIR / "assets"
 BACKUP_DIR = ASSETS_DIR / "db_backups"
 MODEL_DIR = ASSETS_DIR / 'models'
+PROMPT_TEMPLATES_DIR = ASSETS_DIR / "prompt_templates"
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -50,23 +53,18 @@ LOGGING_CONFIG = {
         # },
     },
     "loggers": {
-        "bot": {
+        "programming": {
             'handlers': ['console'],
-            "level": "INFO",
+            "level": "DEBUG",
             "propagate": False
         },
-        # "telegram": {
-        #     'handlers': ['console2', "file"],
-        #     "level": "INFO",
-        #     "propagate": False
-        # }
     }
 }
 
 dictConfig(LOGGING_CONFIG)
 
 
-def get_logger(name="bot"):
+def get_logger(name="programming"):
     return logging.getLogger(name)
 
 
@@ -90,3 +88,4 @@ ensure_directory_exists(DEFAULT_SETTINGS_DIR)
 ensure_directory_exists(ASSETS_DIR)
 ensure_directory_exists(BACKUP_DIR)
 ensure_directory_exists(MODEL_DIR)
+ensure_directory_exists(PROMPT_TEMPLATES_DIR)
