@@ -1,0 +1,29 @@
+llm_type: llava
+persona: default_persona
+use_memories: true
+save_memories: true
+add_context: true
+pubsub:
+  input_message_topic: message_received
+  processed_message_topic: message_preprocessed
+telegram:
+  bot_nickname: # bot nickname
+  bot_username: # @ bot's username
+  creator_id: # str, for filtering messages
+  creator_username: # Should be your accounts name, not @
+  sticker_path: '' # in future
+weaviate:
+  alpha: 0.5
+  author_name: # str your name under which this program will save memories
+  class_name: # str class name under which we will collect your memories
+  grpc_host: localhost # everything else can stay as default
+  grpc_port: 50051
+  grpc_secure: false
+  http_host: localhost
+  http_port: 8080
+  http_secure: false
+  limit: 2
+  max_distance: 0.6
+  max_retries: 5
+  retry_delay: 5
+  sim_search_type: hybrid

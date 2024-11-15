@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).parent.parent
 CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
 LLM_SETTINGS_DIR = CONFIG_DIR / "llm_settings"
-DEFAULT_SETTINGS_DIR = PROFILES_DIR / "settings.yaml"
+DEFAULT_SETTINGS_DIR = PROFILES_DIR / "default_settings.yaml"
 
 # Assets
 ASSETS_DIR = BASE_DIR / "assets"

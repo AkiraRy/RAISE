@@ -1,0 +1,22 @@
+chat_format: mistral-instruct
+cuda: 1
+endpoint: null
+llm_model_file: llava-v1.6-mistral-7b.Q3_K_XS.gguf
+llm_model_name: cjpais/llava-1.6-mistral-7b-gguf
+local: true
+max_tokens: 1024
+min_p: 0.05
+n_batch: 256
+n_ctx: 8192
+n_gpu_layers: -1
+repeat_penalty: 1.18
+seed: null
+stop:
+- 'Q:'
+- \n
+stream: false
+temperature: 0.5
+top_k: 50
+top_p: 1.0
+typical_p: 1.0
+verbose: false
