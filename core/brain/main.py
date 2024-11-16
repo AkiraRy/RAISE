@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 from typing import Optional, List
-from . import logger, PROFILES_DIR
+from . import logger, PROFILES_DIR, PERSONA_DIR
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
 from utils import Message
@@ -134,7 +134,7 @@ class Brain(metaclass=Singleton):
 
     def load_persona(self, persona_path) -> None:
         try:
-            path = PROFILES_DIR / f"{persona_path}.txt"
+            path = PERSONA_DIR / f"{persona_path}.txt"
             logger.info(f"[Brain/load_persona] Trying to load AI Persona from file at {path}")
 
             with open(path, 'r', encoding='utf-8') as f:

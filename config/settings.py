@@ -20,6 +20,7 @@ DEFAULT_SETTINGS = PROFILES_DIR / SETTINGS_FILE
 ASSETS_DIR = BASE_DIR / "assets"
 BACKUP_DIR = ASSETS_DIR / "db_backups"
 MODEL_DIR = ASSETS_DIR / 'models'
+PERSONA_DIR = ASSETS_DIR / 'persona_description'
 PROMPT_TEMPLATES_DIR = ASSETS_DIR / "prompt_templates"
 
 LOGGING_CONFIG = {
@@ -89,3 +90,4 @@ ensure_directory_exists(ASSETS_DIR)
 ensure_directory_exists(BACKUP_DIR)
 ensure_directory_exists(MODEL_DIR)
 ensure_directory_exists(PROMPT_TEMPLATES_DIR)
+ensure_directory_exists(PERSONA_DIR)

@@ -6,7 +6,8 @@ from config import (PROFILES_DIR,
                     MODEL_DIR,
                     SettingsManager,
                     LLM_SETTINGS_DIR,
-                    PROMPT_TEMPLATES_DIR)
+                    PROMPT_TEMPLATES_DIR,
+                    PERSONA_DIR)
 
 
 @dataclass

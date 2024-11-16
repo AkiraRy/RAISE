@@ -7,5 +7,6 @@ from .settings import (BACKUP_DIR,
                        ASSETS_DIR,
                        BASE_DIR,
                        MODEL_DIR,
-                       PROMPT_TEMPLATES_DIR)
+                       PROMPT_TEMPLATES_DIR,
+                       PERSONA_DIR)
 from .settings import logger
