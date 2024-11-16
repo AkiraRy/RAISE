@@ -111,6 +111,5 @@ For any inquiries or issues, please open an issue on the repository or contact m
 
 # License
 If you use this software, please credit me via GitHub [link](<https://github.com/AkiraRy)>).
-\
 This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
 ---
