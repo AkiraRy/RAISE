@@ -1,4 +1,4 @@
-llm_type: llava
+llm_type: llava # example
 persona: default_persona
 use_memories: true
 save_memories: true
@@ -7,8 +7,8 @@ pubsub:
   input_message_topic: message_received
   processed_message_topic: message_preprocessed
 telegram:
-  bot_nickname: # bot nickname
-  bot_username: # @ bot's username
+  bot_nickname: # ai_assistant
+  bot_username: # @ai_assistant
   creator_id: # str, for filtering messages
   creator_username: # Should be your accounts name, not @
   sticker_path: '' # in future

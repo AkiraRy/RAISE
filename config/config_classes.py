@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 from pathlib import Path
 import yaml
-from .settings import DEFAULT_SETTINGS_DIR, ensure_directory_exists, logger, LLM_SETTINGS_DIR
+from .settings import DEFAULT_SETTINGS, ensure_directory_exists, logger, LLM_SETTINGS_DIR
 from pydantic import BaseModel, model_validator
 
 
@@ -167,7 +167,7 @@ class Config(BaseSettings):
 
 
 class SettingsManager:
-    def __init__(self, config: Config = Config(), yaml_path: Path = DEFAULT_SETTINGS_DIR):
+    def __init__(self, config: Config = Config(), yaml_path: Path = DEFAULT_SETTINGS):
         self.config: Config = config
         self.yaml_path = Path(yaml_path)
         ensure_directory_exists(self.yaml_path.parent)
