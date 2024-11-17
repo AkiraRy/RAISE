@@ -61,6 +61,7 @@ class Model:
     def _generate_remote(self, messages: List[dict]):
         raise NotImplemented
 
+    # noinspection PyTypeChecker
     def _generate_local(self, messages: List[dict]):
         stat_time = datetime.now()
         formatted_prompt = self.format_prompt(messages)

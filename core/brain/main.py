@@ -1,7 +1,6 @@
-import asyncio
 import datetime
 from typing import Optional, List
-from . import logger, PROFILES_DIR, PERSONA_DIR
+from . import logger, PERSONA_DIR
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
 from utils import Message
@@ -60,58 +59,68 @@ class Brain(metaclass=Singleton):
             return
         logger.info(f"[Brain/start] Not using chat data/memories")
 
+    def _add_to_chat_history(self, role: str, content: str):
+        logger.info(f"[Brain/_def_add_to_chat_history] Added message to chat history for {role}")
+        self.memories.append({
+            'role': 'user' if role == "role" else "assistant",
+            'content': content
+        })
+        # 1.1 checking if we use more tokens than allowed in prompt
+        curr_token = self.forget()
+        logger.info(f"[Brain/_def_add_to_chat_history] Current total number of tokens is {curr_token}")
+
+    async def _save_to_memory(self, message: Message):
+        if not self.save_memories:
+            logger.info(f"[Brain/_save_to_memory] Saving to memory ignored.")
+            return
+
+        logger.info("[Brain/_save_to_memory] saving memories.")
+        mem_chain = MemoryChain()
+        mem_chain.add_object(
+            from_name=message.from_user,
+            message=message.text_content.content,
+            time=message.datetime
+        )
+        mem_chain.add_object(
+            from_name=self.assistant_name,
+            message=message.response_message,
+            time=datetime.datetime.now().astimezone()
+        )
+        saved = await self.memory_manager.add_memories(memory_chain=mem_chain)
+
+        if not saved:
+            logger.error("[Brain/_save_to_memory] couldn't save memories")
+
     async def process_message(self, message: Message):
         if not self.is_loaded_model:
             logger.warning(f"[Brain/process_message] Model({self.model.llm_settings.llm_model_name}) is not loaded")
             message.response_message = f'Model({self.model.llm_settings.llm_model_name}) is not loaded.'
             self.pubsub.publish(self.publish_to_topic, message)
-            return  # send here an message with error inside
+            return
 
         # 1. Getting current memories with user input
         content = message.text_content.content
-        logger.info(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
+        logger.debug(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
 
-        self.memories.append({
-            'role': 'user',
-            'content': content
-        })
-        # 1.1 checking if we use more tokens than allowed in prompt
-        curr_token = self.forget()
-        logger.info(f"[Brain/process_message] Current total number of tokens is {curr_token}")
+        self._add_to_chat_history('user', content)
 
         # 2. Response generation
         logger.info(f"[Brain/process_message] Generating an llm response")
         logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
         response_content, usage, generation_time = self.model.generate(self.memories)
+        message.response_message = response_content.content
 
-        self.memories.append({
-            'role': 'assistant',
-            'content': response_content.content
-        })
+        self._add_to_chat_history('assistant', response_content.content)
 
         # saving to memory (optional)
         logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
 
-        if self.save_memories:
-            logger.info("[Brain/process_message] saving memories.")
-            mem_chain = MemoryChain()
-            mem_chain.add_object(
-                from_name=message.from_user,
-                message=content,
-                time=message.datetime  # DO SOMETHING?
-            )
-            mem_chain.add_object(
-                from_name=self.assistant_name,
-                message=response_content.content,
-                time=datetime.datetime.now().astimezone()
-            )
-            await self.memory_manager.add_memories(memory_chain=mem_chain)
+        await self._save_to_memory(message)
 
         if not self.use_memories:
-            logger.info(f"[Brain/process_message] clearing chat info from context")
+            logger.info(f"[Brain/process_message] clearing chat info from history")
             self.memories = self.memories[:1]  # we only leave our persona
 
-        message.response_message = response_content.content
         self.pubsub.publish(self.publish_to_topic, message)
 
     def close(self):
@@ -186,5 +195,3 @@ class Brain(metaclass=Singleton):
             prompt = self.model.format_prompt(self.memories)
             curr_total_tokens = self.model.count_tokens(prompt)
         return curr_total_tokens
-
-
