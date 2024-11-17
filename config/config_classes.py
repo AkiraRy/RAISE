@@ -150,6 +150,7 @@ class Config(BaseSettings):
     persona: str = "default_persona"
     use_memories: bool = False
     save_memories: bool = False
+    add_context: bool = False
 
     # plugins: Dict[str, PluginSettings] = field(default_factory=dict)
     # def validate(self):
@@ -208,6 +209,7 @@ class SettingsManager:
             self.config.persona = data.get("persona", "default_persona")
             self.config.use_memories = data.get("use_memories", False)
             self.config.save_memories = data.get("save_memories", False)
+            self.config.add_context = data.get("add_context", False)
 
             self.load_llm_settings()
             # self.config.validate()

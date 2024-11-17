@@ -31,19 +31,20 @@ class MemoryChain(BaseModel):
 
         if memory:
             self.memories.append(memory)
-        else:
-            if from_name is None or message is None or time is None:
-                raise ValueError("from_name, message, and time are required when memory is not provided")
+            return
 
-            memory = Memory(
-                from_name=from_name,
-                message=message,
-                time=time,
-                distance=distance,
-                certainty=certainty,
-                score=score
-            )
-            self.memories.append(memory)
+        if from_name is None or message is None or time is None:
+            raise ValueError("from_name, message, and time are required when memory is not provided")
+
+        memory = Memory(
+            from_name=from_name,
+            message=message,
+            time=time,
+            distance=distance,
+            certainty=certainty,
+            score=score
+        )
+        self.memories.append(memory)
 
 
 class Async_DB_Interface(ABC):

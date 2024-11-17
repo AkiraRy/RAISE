@@ -65,7 +65,8 @@ class Model:
     def _generate_local(self, messages: List[dict]):
         stat_time = datetime.now()
         formatted_prompt = self.format_prompt(messages)
-
+        logger.debug(f"[Model/_generate_local] formatted_prompt {formatted_prompt}")
+        logger.debug(f"[Model/_generate_local] settings {self.llm_settings}")
         response = self.llm.create_completion(
             prompt=formatted_prompt,
             temperature=self.llm_settings.temperature,
@@ -89,6 +90,7 @@ class Model:
             finish_reason=choices['finish_reason']
         )
         usage = Usage(**response['usage'])
+        logger.debug(f'[Model/_generate_local] generated this response {response_content.content}')
         logger.info(f"[Model/_generate_local] Generated message with {usage.completion_tokens} tokens in {generation_time}s ")
 
         return response_content, usage, generation_time

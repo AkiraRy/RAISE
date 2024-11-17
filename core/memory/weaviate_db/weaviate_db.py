@@ -2,7 +2,11 @@ import asyncio
 from typing import Optional
 
 from . import WeaviateSettings, logger, MemoryChain, WeaviateBase, WeaviateAsyncClient
-from .weaviate_utils import bm_25_search, near_text_search, hybrid_search, convert_response_to_mem_chain
+from .weaviate_utils import (bm_25_search,
+                             near_text_search,
+                             hybrid_search,
+                             convert_response_to_mem_chain,
+                             )
 
 from weaviate.classes.query import Sort
 from weaviate.connect import ConnectionParams
@@ -28,7 +32,7 @@ class Weaviate(WeaviateBase):
         return False
 
     async def add_memories(self, memory_chain: MemoryChain) -> bool:
-        logger.error(f"[Weaviate/add_memories] Starting to add memories {memory_chain}")
+        logger.info(f"[Weaviate/add_memories] Starting to add memories {memory_chain}")
 
         if not await self.is_alive():
             logger.error(f"[Weaviate/add_memories] Connection is closed. Cannot add memories")

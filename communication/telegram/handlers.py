@@ -37,6 +37,8 @@ async def send_message_from_pubsub(message: TelegramMessage):
     # We will get this object form PUBSUB
     try:
         content = message.response_message
+        if not content:
+            content = 'Something went wrong. No response was generated'
         await message.update.message.reply_text(content)
     except Exception as e:
         logger.error(f"[Telegram/send_message_from_pubsub] Unexpectedly got an error {e}")

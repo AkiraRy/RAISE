@@ -29,6 +29,7 @@ class Brain(metaclass=Singleton):
                  publish_to: str,
                  use_memories: bool,
                  save_memories: bool,
+                 add_context: bool,
                  token_limit: int = 2000
                  ):
         # memory_manager - db instance, persona - name of the file where persona is stored
@@ -46,6 +47,7 @@ class Brain(metaclass=Singleton):
         self.receive_topic: str = subscribe_to
         self.publish_to_topic: str = publish_to
         self.use_memories: bool = use_memories
+        self.add_context: bool = add_context
         self.save_memories = save_memories
         self.is_loaded_model: bool = False
 
@@ -65,7 +67,7 @@ class Brain(metaclass=Singleton):
     def _add_to_chat_history(self, role: str, content: str):
         logger.info(f"[Brain/_def_add_to_chat_history] Added message to chat history for {role}")
         self.memories.append({
-            'role': 'user' if role == "role" else "assistant",
+            'role': 'user' if role == "user" else "assistant",
             'content': content
         })
         # 1.1 checking if we use more tokens than allowed in prompt
@@ -107,23 +109,33 @@ class Brain(metaclass=Singleton):
 
         self._add_to_chat_history('user', content)
 
-        # 2. Response generation
+        # 2. Getting context for user query.
+        # make it in separate function
+        if self.add_context:
+            context_mem_chain = await self.memory_manager.get_context(content)
+            did_add_context = self._render_persona_with_context(context_mem_chain)
+            if not did_add_context:
+                logger.info(f'[Brain/process_message] did not add any context to the system prompt.')
+
+        # 3. Response generation
         logger.info(f"[Brain/process_message] Generating an llm response")
         logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
         response_content, usage, generation_time = self.model.generate(self.memories)
         message.response_message = response_content.content
+        logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
+        logger.debug(f"[Brain/process_message] Received response from llm usage: {usage}")
 
         self._add_to_chat_history('assistant', response_content.content)
 
-        # saving to memory (optional)
-        logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
-
+        # 4. saving to memory (optional)
         await self._save_to_memory(message)
 
+        # 5. cleaning chat history (optional)
         if not self.use_memories:
             logger.info(f"[Brain/process_message] clearing chat info from history")
             self.memories = self.memories[:1]  # we only leave our persona
 
+        # 6. sending back to communication module
         self.pubsub.publish(self.publish_to_topic, message)
 
     def close(self):
@@ -167,7 +179,7 @@ class Brain(metaclass=Singleton):
         else:
             logger.info(f"[Brain/load_persona] Successfully loaded AI persona")
 
-    def _render_persona_with_context(self, context: Optional[str] = None) -> bool:
+    def _render_persona_with_context(self, memory_chain: Optional[MemoryChain] = None) -> bool:
         """return True if rendered prompt successfully"""
         if not self.template:
             logger.error("[Brain/_render_persona_with_context] No persona template loaded.")
@@ -175,6 +187,29 @@ class Brain(metaclass=Singleton):
         if self.memories[0].get('role', '') != 'system':
             logger.warning("[Brain/_render_persona_with_context] There is no system message in chat history")
             return False
+        if not memory_chain:
+            logger.warning(f"[Brain/_render_persona_with_context] There is no context in provided memory_chain {memory_chain}")
+            return False
+
+        message_list = [memory.message for memory in memory_chain.memories]
+        distances_list = [[memory.distance, memory.certainty, memory.score] for memory in memory_chain.memories]
+        from_list = [memory.from_name for memory in memory_chain.memories]
+        time_list = [memory.time for memory in memory_chain.memories]
+
+        logger.debug(f'[Brain/_render_persona_with_context] messages in the context: {" ".join(message_list)}')
+        logger.debug(f'[Brain/_render_persona_with_context] distances in the context: {distances_list}')
+        logger.debug(f'[Brain/_render_persona_with_context] from in the context: {" ".join(from_list)}')
+        logger.debug(f'[Brain/_render_persona_with_context] time in the context: {time_list}')
+
+        context = ''
+        for name, message, time in zip(from_list, message_list, time_list):
+            context += f'{name}: {message_list} sent at {time}'
+
+        if not context:
+            logger.warning(f'[Brain/_render_persona_with_context] empty context string.')
+            return False
+
+        logger.debug(f'[Brain/_render_persona_with_context] final context string {context}')
 
         rendered_persona = self.template.render(context=context)
         logger.info("[Brain/_render_persona_with_context] Successfully rendered system prompt with context.")
@@ -184,6 +219,7 @@ class Brain(metaclass=Singleton):
             'content': rendered_persona
         }
         logger.info("[Brain/_render_persona_with_context] Successfully replaced system message in chat history")
+        self.forget()
         return True
 
     async def initialize_memories(self) -> None:

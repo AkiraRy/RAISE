@@ -44,7 +44,8 @@ async def main():
         publish_to=settings_manager.config.pubsub.processed_message_topic,
         subscribe_to=settings_manager.config.pubsub.input_message_topic,
         save_memories=settings_manager.config.save_memories,
-        use_memories=settings_manager.config.use_memories
+        use_memories=settings_manager.config.use_memories,
+        add_context=settings_manager.config.add_context
     )
 
     tg_interface = TelegramInterface(
