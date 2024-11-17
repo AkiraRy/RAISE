@@ -70,6 +70,8 @@ You only need to specify `author_name` and `class_name`
 In the `.env.simple` you should specify your bot's api token and Hugging face token to download model.
 After that you should rename it to `.env`
 
+!! If you wish to use your custom config, then you should change `config_name` in the .env Example: `settings` (no file extension)
+
 3. Weaviate collection setup
 
 If you set up everything correctly in your settings, then you should be able to run setup.

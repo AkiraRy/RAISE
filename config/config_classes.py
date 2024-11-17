@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 from pathlib import Path
 import yaml
-from .settings import DEFAULT_SETTINGS, ensure_directory_exists, logger, LLM_SETTINGS_DIR
+from .settings import DEFAULT_SETTINGS, SETTINGS_FROM_ENV, ensure_directory_exists, logger, LLM_SETTINGS_DIR
 from pydantic import BaseModel, model_validator
 
 
@@ -167,49 +167,62 @@ class Config(BaseSettings):
 
 
 class SettingsManager:
-    def __init__(self, config: Config = Config(), yaml_path: Path = DEFAULT_SETTINGS):
-        self.config: Config = config
-        self.yaml_path = Path(yaml_path)
+    def __init__(self):
+        self.config: Config = Config()
+        self.yaml_path = Path(SETTINGS_FROM_ENV)
+
+        if not self.yaml_path.exists():
+            logger.warning(
+                f"[SettingsManager/__init__] File '{self.yaml_path}' does not exist. Falling back to DEFAULT_SETTINGS.")
+            self.yaml_path = DEFAULT_SETTINGS
+
+        if not self.yaml_path.exists():
+            logger.error(f"[SettingsManager/__init__] Neither '{SETTINGS_FROM_ENV}' nor '{DEFAULT_SETTINGS}' exists.")
+            raise RuntimeError(f"[SettingsManager/__init__] Configuration file not found: '{SETTINGS_FROM_ENV}' or '{DEFAULT_SETTINGS}'.")
+
         ensure_directory_exists(self.yaml_path.parent)
 
     def load_settings(self):
-        if self.yaml_path.exists():
-            try:
-                with open(self.yaml_path, 'r') as f:
-                    data = yaml.safe_load(f)
+        if not self.yaml_path.exists():
+            logger.error(f"[SettingsManager/load_settings] Yaml({self.yaml_path}) path doesn't exists")
+            raise RuntimeError(f"[SettingsManager/load_settings] Configuration file '{self.yaml_path}' not found.")
 
-                if 'telegram' in data:
-                    self.config.telegram = TelegramSettings(**data['telegram'])
-                if 'discord' in data:
-                    self.config.discord = DiscordSettings(**data['discord'])
-                if 'weaviate' in data:
-                    self.config.weaviate = WeaviateSettings(**data['weaviate'])
-                if 'pubsub' in data:
-                    self.config.pubsub = PubSubSettings(**data['pubsub'])
+        try:
+            with open(self.yaml_path, 'r') as f:
+                data = yaml.safe_load(f)
 
-                # if 'plugins' in data:
-                #     for name, settings in data['plugins'].items():
-                #         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
+            if 'telegram' in data:
+                self.config.telegram = TelegramSettings(**data['telegram'])
+            if 'discord' in data:
+                self.config.discord = DiscordSettings(**data['discord'])
+            if 'weaviate' in data:
+                self.config.weaviate = WeaviateSettings(**data['weaviate'])
+            if 'pubsub' in data:
+                self.config.pubsub = PubSubSettings(**data['pubsub'])
 
-                self.config.llm_type = data.get('llm_type', 'default')
-                self.config.persona = data.get("persona", "default_persona")
-                self.config.use_memories = data.get("use_memories", False)
-                self.config.save_memories = data.get("save_memories", False)
+            # if 'plugins' in data:
+            #     for name, settings in data['plugins'].items():
+            #         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
 
+            self.config.llm_type = data.get('llm_type', 'default')
+            self.config.persona = data.get("persona", "default_persona")
+            self.config.use_memories = data.get("use_memories", False)
+            self.config.save_memories = data.get("save_memories", False)
 
-                self.load_llm_settings()
-                # self.config.validate()
-                logger.info("[SettingsManager/load_settings] Settings loaded successfully.")
+            self.load_llm_settings()
+            # self.config.validate()
+            logger.info("[SettingsManager/load_settings] Settings loaded successfully.")
 
-            except (FileNotFoundError, yaml.YAMLError) as e:
-                logger.error(f"[SettingsManager/load_settings] Error loading settings from {self.yaml_path}: {e}")
-                raise
+        except (FileNotFoundError, yaml.YAMLError) as e:
+            logger.error(f"[SettingsManager/load_settings] Error loading settings from {self.yaml_path}: {e}")
+            raise
 
         return self
 
     def load_single_module(self, component):
         if not self.yaml_path.exists():
             logger.error(f"[SettingsManager/load_single_module] Yaml({self.yaml_path}) path doesn't exists")
+            raise RuntimeError(f"[SettingsManager/load_single_module] Configuration file '{self.yaml_path}' not found.")
 
         try:
             with open(self.yaml_path, 'r') as f:

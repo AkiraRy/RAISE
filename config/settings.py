@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import sys
 from dotenv import load_dotenv
@@ -13,8 +14,11 @@ BASE_DIR = Path(__file__).parent.parent
 CONFIG_DIR = BASE_DIR / 'config'
 PROFILES_DIR = CONFIG_DIR / "profiles"
 LLM_SETTINGS_DIR = CONFIG_DIR / "llm_settings"
-SETTINGS_FILE = "default_settings.yaml"
-DEFAULT_SETTINGS = PROFILES_DIR / SETTINGS_FILE
+DEFAULT_SETTINGS_FILE = "default_settings.yaml"
+DEFAULT_SETTINGS = PROFILES_DIR / DEFAULT_SETTINGS_FILE
+
+config_name = f'{os.getenv("config_name", "").strip()}.yaml'
+SETTINGS_FROM_ENV = PROFILES_DIR / config_name
 
 # Assets
 ASSETS_DIR = BASE_DIR / "assets"
@@ -46,13 +50,13 @@ LOGGING_CONFIG = {
             'class': "logging.StreamHandler",
             'formatter': "standard"
         },
-        # "file": {
-        #     'level': "INFO",
-        #     'class': "logging.FileHandler",
-        #     'filename': "logs/infos.log",
-        #     'mode': "w",
-        #     'formatter': "verbose"
-        # },
+        "file": {
+            'level': "INFO",
+            'class': "logging.FileHandler",
+            'filename': "../logs/infos.log",
+            'mode': "w",
+            'formatter': "verbose"
+        },
     },
     "loggers": {
         "programming": {
