@@ -1,9 +1,11 @@
 import datetime
 from typing import Optional, List
+from jinja2 import Template
+from utils import Message
+
 from . import logger, PERSONA_DIR
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
-from utils import Message
 
 
 # add context search
@@ -37,6 +39,7 @@ class Brain(metaclass=Singleton):
 
         # Config
         self.persona: Optional[str] = None
+        self.template: Optional[Template] = None
         self.user_name: str = user_name
         self.assistant_name: str = assistant_name
         self.token_limit: int = token_limit
@@ -149,17 +152,39 @@ class Brain(metaclass=Singleton):
             with open(path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
 
-            self.persona = ''.join(lines)
+            self.template = Template(''.join(lines))
+
+            # Render the persona without context for initial loading
+            self.persona = self.template.render(context=None)
 
             self.memories.append({
                 'role': 'system',
                 'content': self.persona
             })
-
+            logger.debug(f'[Brain/load_persona] loaded persona is {self.persona}')
         except IOError:
             logger.error(f"[Brain/load_persona] There was an error during handling the file {self.persona}")
         else:
             logger.info(f"[Brain/load_persona] Successfully loaded AI persona")
+
+    def _render_persona_with_context(self, context: Optional[str] = None) -> bool:
+        """return True if rendered prompt successfully"""
+        if not self.template:
+            logger.error("[Brain/_render_persona_with_context] No persona template loaded.")
+            return False
+        if self.memories[0].get('role', '') != 'system':
+            logger.warning("[Brain/_render_persona_with_context] There is no system message in chat history")
+            return False
+
+        rendered_persona = self.template.render(context=context)
+        logger.info("[Brain/_render_persona_with_context] Successfully rendered system prompt with context.")
+
+        self.memories[0] = {
+            'role': 'system',
+            'content': rendered_persona
+        }
+        logger.info("[Brain/_render_persona_with_context] Successfully replaced system message in chat history")
+        return True
 
     async def initialize_memories(self) -> None:
         try:
