@@ -203,7 +203,7 @@ class Brain(metaclass=Singleton):
 
         context = ''
         for name, message, time in zip(from_list, message_list, time_list):
-            context += f'{name}: {message_list} sent at {time}'
+            context += f'{name}: {message} sent at {time}\n'
 
         if not context:
             logger.warning(f'[Brain/_render_persona_with_context] empty context string.')

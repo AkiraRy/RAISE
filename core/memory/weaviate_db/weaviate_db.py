@@ -137,3 +137,16 @@ class Weaviate(WeaviateBase):
         logger.error(f"[Weaviate/connect_db] {final_err_str}")
         # raise weaviate.WeaviateStartUpError(final_err_str)
         return -1
+
+    async def delete_by_uuid(self, uuid: str):
+        logger.info(f'[Weaviate/delete_by_uuid] {uuid}')
+        assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
+        try:
+            collection = self.client.collections.get(self.config.class_name)
+            await collection.data.delete_by_id(
+                uuid
+            )
+            return True
+        except Exception as e:
+            logger.error(f'[Weaviate/delete_by_uuid] {e}')
+            return False

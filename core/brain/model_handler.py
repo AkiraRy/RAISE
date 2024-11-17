@@ -63,10 +63,11 @@ class Model:
 
     # noinspection PyTypeChecker
     def _generate_local(self, messages: List[dict]):
-        stat_time = datetime.now()
+
         formatted_prompt = self.format_prompt(messages)
         logger.debug(f"[Model/_generate_local] formatted_prompt {formatted_prompt}")
         logger.debug(f"[Model/_generate_local] settings {self.llm_settings}")
+        stat_time = datetime.now()
         response = self.llm.create_completion(
             prompt=formatted_prompt,
             temperature=self.llm_settings.temperature,

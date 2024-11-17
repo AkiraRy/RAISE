@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import os.path
@@ -8,6 +9,7 @@ from weaviate.classes.query import MetadataQuery, Filter, Sort
 from weaviate import exceptions
 
 from . import WeaviateBase, Memory, MemoryChain, BACKUP_DIR, logger
+from concurrent.futures import ThreadPoolExecutor
 
 
 # all backups would be stored at base/asses/db_backups
