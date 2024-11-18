@@ -49,8 +49,7 @@ class MemoryChain(BaseModel):
 
 class Async_DB_Interface(ABC):
     @abstractmethod
-    async def connect(self) -> int:
-        # returns 0 if successfully connected
+    async def connect(self) -> bool:
         pass
 
     @abstractmethod

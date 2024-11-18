@@ -39,6 +39,19 @@ class ChatMemoryResponse(BaseModel):
     chat_history: list[dict]  # List of chat memories
 
 
+@app.get("/is_alive")
+async def is_alive():
+    try:
+        is_live = await weaviate_db.is_alive()
+        if is_live:
+            return {"status": "success", "message": "Weaviate is alive and connected"}
+        else:
+            raise HTTPException(status_code=503, detail="Weaviate is not reachable")
+    except Exception as e:
+        logger.error(f"Error checking Weaviate status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to check Weaviate status")
+
+
 @app.delete("/delete_memory")
 async def delete_memory(request: DeleteMemoryRequest):
     """
@@ -67,7 +80,6 @@ async def add_memories(request: AddMemoriesRequest):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to add memories")
     return {"status": "success", "message": "Memories added successfully"}
-
 
 
 # Endpoint: Get Context

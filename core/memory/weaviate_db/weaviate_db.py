@@ -28,7 +28,7 @@ class Weaviate(WeaviateBase):
     async def is_alive(self) -> bool:
         if self.client and await self.client.is_live():
             return True
-        logger.error(f"[Weaviate/is_alive] Connection is closed.")
+        logger.info(f"[Weaviate/is_alive] Connection is closed.")
         return False
 
     async def add_memories(self, memory_chain: MemoryChain) -> bool:
@@ -104,7 +104,7 @@ class Weaviate(WeaviateBase):
     async def connect(self) -> int:
         if self.client and await self.client.is_live():
             logger.warning(f"[Weaviate/connect] Already established connection")
-            return 0
+            return True
 
         max_retries = self.config.max_retries
         retry_delay = self.config.retry_delay
@@ -125,7 +125,7 @@ class Weaviate(WeaviateBase):
                 self.client = WeaviateAsyncClient(connection_params=conn_params)
                 await self.client.connect()
                 logger.info(f"[Weaviate/connect_db] Successfully connected to Async version of Weaviate")
-                return 0
+                return True
             except Exception as e:  # should fix this later proly
                 if self.client:
                     await self.client.close()
@@ -136,7 +136,7 @@ class Weaviate(WeaviateBase):
 
         logger.error(f"[Weaviate/connect_db] {final_err_str}")
         # raise weaviate.WeaviateStartUpError(final_err_str)
-        return -1
+        return False
 
     async def delete_by_uuid(self, uuid: str):
         logger.info(f'[Weaviate/delete_by_uuid] {uuid}')

@@ -3,13 +3,17 @@ from typing import Optional, List
 from httpx import AsyncClient  # HTTP requests
 from . import Async_DB_Interface, logger, MemoryChain, Memory
 
-
 # Weaviate Helper Class
 class WeaviateHelper(Async_DB_Interface):
-    async def connect(self) -> int:
-        # add endpopint to check if live if not handle somehow.
-        logger.info(f"[Weaviate_helper/connect] already connected. ")
-        return 0
+    async def connect(self) -> bool:
+        try:
+            response = await self.client.get(f"{self.base_url}/is_alive")
+            if response.status_code == 200 and response.json().get("status") == "success":
+                return True
+            return False
+        except Exception as e:
+            print(f"Error checking /is_alive endpoint: {e}")
+            return False
 
     def __init__(self, base_url: str):
         self.base_url = base_url

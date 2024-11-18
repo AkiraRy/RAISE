@@ -218,7 +218,7 @@ async def hybrid_search(weaviate_db: WeaviateBase, query: str) -> Optional[Memor
 async def delete_by_uuid(weaviate_db: WeaviateBase, uuid: str):
     assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
     collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
-    await collection.data.delete_by_id(
+    return await collection.data.delete_by_id(
         uuid
     )
 
