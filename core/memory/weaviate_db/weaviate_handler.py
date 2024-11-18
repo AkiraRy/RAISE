@@ -3,13 +3,17 @@ from typing import Optional, List
 from httpx import AsyncClient  # HTTP requests
 from . import Async_DB_Interface, logger, MemoryChain, Memory
 
+
 # Weaviate Helper Class
 class WeaviateHelper(Async_DB_Interface):
     async def connect(self) -> bool:
         try:
+            logger.info(f'[WeaviateHelper/connect] Asking if Weaviate is still alive')
             response = await self.client.get(f"{self.base_url}/is_alive")
             if response.status_code == 200 and response.json().get("status") == "success":
+                logger.info(f'[WeaviateHelper/connect] Weavite is still alive')
                 return True
+            logger.info(f'[WeaviateHelper/connect] Weavite is not alive')
             return False
         except Exception as e:
             print(f"Error checking /is_alive endpoint: {e}")
@@ -22,12 +26,14 @@ class WeaviateHelper(Async_DB_Interface):
     async def add_memories(self, memory_chain: MemoryChain) -> bool:
         url = f"{self.base_url}/add_memories"
         try:
-            memory_chain_json = convert_memory_chain_to_json(memory_chain)
 
+            memory_chain_json = convert_memory_chain_to_json(memory_chain)
+            logger.info(f'[WeaviateHelper/add_memories] Sending a post request for memory adding.')
             response = await self.client.post(url, json={"memory_chain": memory_chain_json})
             if response.status_code == 200:
+                logger.info(f'[WeaviateHelper/add_memories] Memories were added successfully')
                 return True
-            logger.error(f"[WeaviateHelper/add_memories] Failed with status {response.status_code}: {response.text}")
+            logger.error(f"[WeaviateHelper/add_memories] Failed to add memories with status {response.status_code}: {response.text}")
             return False
         except Exception as e:
             logger.error(f"[WeaviateHelper/add_memories] Exception: {e}")
@@ -36,12 +42,14 @@ class WeaviateHelper(Async_DB_Interface):
     async def get_context(self, query: str) -> Optional[MemoryChain]:
         url = f"{self.base_url}/get_context"
         try:
-            response = await self.client.post(url, json={"query": query})
+            logger.info(f'[WeaviateHelper/get_context] Sending a post request for memory adding.')
+            response = await self.client.get(url,  params={"query": query})
             if response.status_code == 200:
+                logger.info(f'[WeaviateHelper/get_context] Successfully got context for query {query}.')
                 context_data = response.json().get("context", [])
                 return convert_json_to_memory_chain(context_data)
 
-            logger.error(f"[WeaviateHelper/get_context] Failed with status {response.status_code}: {response.text}")
+            logger.error(f"[WeaviateHelper/get_context] Failed to get context with status {response.status_code}: {response.text}")
             return None
         except Exception as e:
             logger.error(f"[WeaviateHelper/get_context] Exception: {e}")
@@ -50,24 +58,26 @@ class WeaviateHelper(Async_DB_Interface):
     async def get_chat_memory(self, limit: int = 20) -> Optional[MemoryChain]:
         url = f"{self.base_url}/get_chat_memory"
         try:
+            logger.info(f"[WeaviateHelper/get_chat_memory] Sending get request for chat memory with limit: {limit}")
             response = await self.client.get(url, params={"limit": limit})
             if response.status_code == 200:
+                logger.info(
+                    f"[WeaviateHelper/get_chat_memory] Successfully retrieved chat memories with")
                 chat_history_data = response.json().get("chat_history", [])
                 return convert_json_to_memory_chain(chat_history_data)
-            logger.error(f"[WeaviateHelper/get_chat_memory] Failed with status {response.status_code}: {response.text}")
+            logger.error(f"[WeaviateHelper/get_chat_memory] Failed to get chat memory with status {response.status_code}: {response.text}")
             return None
         except Exception as e:
             logger.error(f"[WeaviateHelper/get_chat_memory] Exception: {e}")
             return None
 
     async def close(self):
+        logger.error(f"[WeaviateHelper/close] Closing asyncclient in weaviate helper. NOT server.")
         await self.client.aclose()
 
 
 def convert_memory_chain_to_json(memory_chain: MemoryChain) -> List[dict]:
-    """
-    Converts a MemoryChain object into a JSON-serializable format (list of dicts).
-    """
+    logger.info(f'[convert_memory_chain_to_json] Converting memory chain to json')
     try:
         json_data = [
             {
@@ -87,9 +97,7 @@ def convert_memory_chain_to_json(memory_chain: MemoryChain) -> List[dict]:
 
 
 def convert_json_to_memory_chain(json_data: List[dict]) -> MemoryChain:
-    """
-    Converts a JSON response (list of dicts) into a MemoryChain object.
-    """
+    logger.info(f'[convert_json_to_memory_chain] Converting json to memory chain ')
     try:
         memory_chain = MemoryChain()
         for memory_data in json_data:

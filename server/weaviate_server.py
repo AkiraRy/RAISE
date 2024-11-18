@@ -83,9 +83,9 @@ async def add_memories(request: AddMemoriesRequest):
 
 
 # Endpoint: Get Context
-@app.post("/get_context")
-async def get_context(request: GetContextRequest):
-    memory_chain = await weaviate_db.get_context(request.query)
+@app.get("/get_context")
+async def get_context(query: str):
+    memory_chain = await weaviate_db.get_context(query)
     if not memory_chain:
         return {"context": []}  # No similar messages found
     return {
