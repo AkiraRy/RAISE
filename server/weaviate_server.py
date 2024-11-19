@@ -90,12 +90,13 @@ async def add_memories(request: AddMemoriesRequest):
 
 @app.get("/get_context")
 async def get_context(query: str):
-    logger.info(f"[weaviate_server/add_memories] get request. Requesting context for user query {query}")
+    logger.info(f"[weaviate_server/get_context] get request. Requesting context for user query {query}")
     memory_chain = await weaviate_db.get_context(query)
-    if not memory_chain:
-        logger.info(f"[weaviate_server/add_memories] get request. Received no context.")
+    logger.debug(f"get context show memory chain: {memory_chain}")
+    if not memory_chain.memories:
+        logger.info(f"[weaviate_server/get_context] get request. Received no context.")
         return {"context": []}  # No similar messages found
-    logger.info(f"[weaviate_server/add_memories] get request. Successfully received context.")
+    logger.info(f"[weaviate_server/get_context] get request. Successfully received context.")
     return {
         "context": [
             {
@@ -113,12 +114,12 @@ async def get_context(query: str):
 
 @app.get("/get_chat_memory")
 async def get_chat_memory(limit: int = 20):
-    logger.info(f"[weaviate_server/add_memories] get request. Requesting last chat memories with limit of {limit} messages")
+    logger.info(f"[weaviate_server/get_chat_memory] get request. Requesting last chat memories with limit of {limit} messages")
     chat_memory = await weaviate_db.get_chat_memory(limit)
     if not chat_memory:
-        logger.info(f"[weaviate_server/add_memories] get request. There were no memories in db")
+        logger.info(f"[weaviate_server/get_chat_memory] get request. There were no memories in db")
         return {"chat_history": []}
-    logger.info(f"[weaviate_server/add_memories] get request. Successfully retrieved {limit} messages from db")
+    logger.info(f"[weaviate_server/get_chat_memory] get request. Successfully retrieved {limit} messages from db")
     return {
         "chat_history": [
             {

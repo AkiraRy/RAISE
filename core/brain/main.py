@@ -109,6 +109,7 @@ class Brain(metaclass=Singleton):
 
         self._add_to_chat_history('user', content)
 
+        did_add_context = False
         # 2. Getting context for user query.
         # make it in separate function
         if self.add_context:
@@ -134,6 +135,14 @@ class Brain(metaclass=Singleton):
         if not self.use_memories:
             logger.info(f"[Brain/process_message] clearing chat info from history")
             self.memories = self.memories[:1]  # we only leave our persona
+
+        if did_add_context:
+            logger.info(f"[Brain/process_message] emptying context")
+            self.memories[0] = {
+                'role': 'system',
+                'content': self.persona
+            }
+            logger.info(f"empty context: {self.memories}")
 
         # 6. sending back to communication module
         self.pubsub.publish(self.publish_to_topic, message)
@@ -232,6 +241,7 @@ class Brain(metaclass=Singleton):
 
         if not fetchedMemories:
             logger.warning(f"[Brain/initialize_memories] Couldn't initialize memories. None were retrieved.")
+            return
 
         for memory in fetchedMemories.memories:
             self.memories.append({

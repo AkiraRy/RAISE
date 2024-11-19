@@ -1,20 +1,18 @@
 import asyncio
 import os
 from config import SettingsManager, logger
-from core import Weaviate, Async_DB_Interface, Brain, Model, PubSub
+from core import Weaviate, Async_DB_Interface, Brain, Model, PubSub, WeaviateHelper
 from communication import TelegramInterface, BaseInterface
 
 
 class AIAssistant:
-    def __init__(self, settings_manager: SettingsManager, communication: BaseInterface, database: Async_DB_Interface, brain: Brain):
+    def __init__(self, settings_manager: SettingsManager, communication: BaseInterface, brain: Brain):
         self.settings_manager = settings_manager
         self.communication = communication
         self.communication_thread = None
-        self.database = database
         self.brain = brain
 
     async def start(self):
-        await self.database.connect()
         await self.brain.start()
         self.communication_thread = self.communication.start_in_thread()
         await asyncio.sleep(1)
@@ -22,7 +20,6 @@ class AIAssistant:
 
     async def stop(self):
         logger.info(f'[AIAssistant/stop] stopping the Application.')
-        await self.database.close()
         self.brain.close()
         logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
@@ -30,7 +27,9 @@ class AIAssistant:
 async def main():
     token = os.getenv("TG_TOKEN")
     settings_manager = SettingsManager().load_settings()
-    weaviate_db = Weaviate(settings_manager.config.weaviate)
+    weaviate_base_url = 'http://127.0.0.1:8000'
+    weaviate_db = WeaviateHelper(weaviate_base_url)
+
     telegram_settings = settings_manager.config.telegram
     model = Model(settings_manager.config.llm)
     pubsub_system = PubSub(pooling_delay=0.1)
@@ -57,7 +56,7 @@ async def main():
     )
 
     pubsub_system.start()
-    ai = AIAssistant(settings_manager, tg_interface, weaviate_db, brain)
+    ai = AIAssistant(settings_manager, tg_interface, brain)
 
     await ai.start()
 
