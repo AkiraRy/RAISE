@@ -18,7 +18,9 @@ weaviate_db = Weaviate(settings_manager.config.weaviate)
 async def lifespan(app: FastAPI):
     global weaviate_db
     logger.info(f'[weaviate_server/lifespan] Connecting to weaviate db and starting the application')
-    await weaviate_db.connect()  # if not connected raise error
+    if not await weaviate_db.connect():  # if not connected raise error
+        logger.error(f"[weaviate_server/lifespan] Weaviate instance is not reachable. Check if you're running db instance in docker")
+        raise RuntimeError("Couldn't connect to db instance")
     yield
     logger.info(f'[weaviate_server/lifespan] Closing connection to weaviate db and shutting down the application')
     await weaviate_db.close()
@@ -35,6 +37,7 @@ class DeleteMemoryRequest(BaseModel):
     uuid: str
 
 
+# noinspection PyAsyncCall
 @app.post("/shutdown")
 async def shutdown_server():
     try:
