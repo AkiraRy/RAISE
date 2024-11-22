@@ -14,7 +14,7 @@ at v1.0
 1. Telegram interface for messaging with your ai assistant
 2. Vector db for memory management.
 3. Personality of your ai assistant description
-4. Fully customizable via config files.
+4. Full(almost) customization via config files.
 
 
 # Prerequisites ⚠️
@@ -41,8 +41,9 @@ How to install and set up everything can be found [here](docs/installation.md)
 
 # Running:
 Make sure that your conda env is activated and that you're in the root of the project.
-
+(use 2 consoles)
 ```commandline
+python -m server_handler
 python -m main
 ```
 
