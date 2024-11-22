@@ -21,6 +21,7 @@ class AIAssistant:
     async def stop(self):
         logger.info(f'[AIAssistant/stop] stopping the Application.')
         self.brain.close()
+        await self.brain.memory_manager.close()
         logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
 

@@ -71,9 +71,32 @@ class WeaviateHelper(Async_DB_Interface):
             logger.error(f"[WeaviateHelper/get_chat_memory] Exception: {e}")
             return None
 
+    async def _shutdown_server(self) -> bool:
+        url = f"{self.base_url}/shutdown"
+
+        try:
+            logger.info(f"[WeaviateHelper/_shutdown_server] Sending post request to shutdown weaviate server")
+            response = await self.client.post(url)
+            if response.status_code == 200:
+                logger.info(
+                    f"[WeaviateHelper/_shutdown_server] Successfully shutdown weaviate server")
+                return True
+            logger.error(f"[WeaviateHelper/_shutdown_server] Failed to shutdown server {response.status_code}: {response.text}")
+            return False
+        except Exception as e:
+            logger.error(f"[WeaviateHelper/_shutdown_server] Exception: {e}")
+            return False
+
     async def close(self):
-        logger.error(f"[WeaviateHelper/close] Closing asyncclient in weaviate helper. NOT server.")
+        logger.info(f"[WeaviateHelper/close] Trying to close fastapi server")
+        did_shutdown = await self._shutdown_server()
+        if not did_shutdown:
+            logger.error(f"[WeaviateHelper/close] Couldn't close fastapiserver")
+            return
+        logger.info(f"[WeaviateHelper/close] Closed fastapi server")
+        logger.info(f"[WeaviateHelper/close] Closing async client")
         await self.client.aclose()
+        return did_shutdown
 
 
 def convert_memory_chain_to_json(memory_chain: MemoryChain) -> List[dict]:
