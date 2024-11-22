@@ -1,3 +1,6 @@
+import asyncio
+import os
+import signal
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -15,7 +18,7 @@ weaviate_db = Weaviate(settings_manager.config.weaviate)
 async def lifespan(app: FastAPI):
     global weaviate_db
     logger.info(f'[weaviate_server/lifespan] Connecting to weaviate db and starting the application')
-    await weaviate_db.connect()
+    await weaviate_db.connect()  # if not connected raise error
     yield
     logger.info(f'[weaviate_server/lifespan] Closing connection to weaviate db and shutting down the application')
     await weaviate_db.close()
@@ -30,6 +33,23 @@ class AddMemoriesRequest(BaseModel):
 
 class DeleteMemoryRequest(BaseModel):
     uuid: str
+
+
+@app.post("/shutdown")
+async def shutdown_server():
+    try:
+        logger.info("[weaviate_server/shutdown] Received shutdown request. Shutting down the server.")
+        await weaviate_db.close()
+
+        async def shutdown_task():
+            await asyncio.sleep(1)  # Give time for the response to complete
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        asyncio.create_task(shutdown_task())
+        return {"status": "success", "message": "Server is shutting down"}
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to shutdown server: {str(e)}")
 
 
 @app.get("/is_alive")
@@ -86,6 +106,7 @@ async def add_memories(request: AddMemoriesRequest):
 
     logger.info(f"[weaviate_server/add_memories] post request. Successfully added memories.")
     return {"status": "success", "message": "Memories added successfully"}
+
 
 
 @app.get("/get_context")

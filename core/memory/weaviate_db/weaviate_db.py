@@ -101,7 +101,7 @@ class Weaviate(WeaviateBase):
             return
         logger.warning(f"[Weaviate/close] Cannot close connection, client doesn't exists")
 
-    async def connect(self) -> int:
+    async def connect(self) -> bool:
         if self.client and await self.client.is_live():
             logger.warning(f"[Weaviate/connect] Already established connection")
             return True
