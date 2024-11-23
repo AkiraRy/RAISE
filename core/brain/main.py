@@ -60,7 +60,7 @@ class Brain(metaclass=Singleton):
         self.load_model()
         if self.use_memories:
             logger.info(f"[Brain/start] initializing chat data/memories")
-            await self.initialize_memories()
+            await self.fetch_chat_data()
             return
         logger.info(f"[Brain/start] Not using chat data/memories")
 
@@ -103,6 +103,11 @@ class Brain(metaclass=Singleton):
             self.pubsub.publish(self.publish_to_topic, message)
             return
 
+        # 0 Is to get last 20 memories.
+        # We delete cached chat data and fetch last 20 messages from the db.
+        # Maybe user used fastapi to delete memories? but they won't be updated here, hence the change.
+        await self._clear_and_fetch_chat_data()
+
         # 1. Getting current memories with user input
         content = message.text_content.content
         logger.debug(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
@@ -134,9 +139,10 @@ class Brain(metaclass=Singleton):
         # 5. cleaning chat history (optional)
         if not self.use_memories:
             logger.info(f"[Brain/process_message] clearing chat info from history")
-            self.memories = self.memories[:1]  # we only leave our persona
+            self._cmwsm()  # leaves only system prompt
 
         if did_add_context:
+            # we want to delete current context for next message from system prompt
             logger.info(f"[Brain/process_message] emptying context")
             self.memories[0] = {
                 'role': 'system',
@@ -231,16 +237,24 @@ class Brain(metaclass=Singleton):
         self.forget()
         return True
 
-    async def initialize_memories(self) -> None:
+    async def _clear_and_fetch_chat_data(self):
+        self._cmwsm()
+        await self.fetch_chat_data()
+
+    def _cmwsm(self):
+        """clear messages without system messages"""
+        self.memories = [memory for memory in self.memories if memory['role'] == 'system']
+
+    async def fetch_chat_data(self) -> None:
         try:
-            logger.info(f"[Brain/initialize_memories] Fetching chat memories")
+            logger.info(f"[Brain/fetch_chat_data] Fetching chat memories")
             fetchedMemories: MemoryChain = await self.memory_manager.get_chat_memory()
         except Exception as e:
-            logger.error(f'[Brain/initialize_memories] Brain was damaged, could not remember anything {e}')
+            logger.error(f'[Brain/fetch_chat_data] Brain was damaged, could not remember anything {e}')
             return
 
         if not fetchedMemories:
-            logger.warning(f"[Brain/initialize_memories] Couldn't initialize memories. None were retrieved.")
+            logger.warning(f"[Brain/fetch_chat_data] Couldn't fetch memories. None were retrieved.")
             return
 
         for memory in fetchedMemories.memories:
@@ -250,8 +264,8 @@ class Brain(metaclass=Singleton):
             })
 
         curr_tokens_amount = self.forget()  # forgets last message in a chat history if necessary
-        logger.info(f"[Brain/initialize_memories] Current total number of tokens is {curr_tokens_amount}")
-        logger.info(f"[Brain/initialize_memories] Successfully initialized memories.")
+        logger.info(f"[Brain/fetch_chat_data] Current total number of tokens is {curr_tokens_amount}")
+        logger.info(f"[Brain/fetch_chat_data] Successfully fetched memories.")
 
     def forget(self) -> int:
         """returns total number of tokens at the end"""
