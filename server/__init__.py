@@ -1,0 +1,1 @@
+from .weaviate_server import app
