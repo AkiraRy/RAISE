@@ -63,6 +63,7 @@ class PluginSettings:  # no idea currently how to make this work. in future fix
     plugin_config: Dict[str, str] = field(default_factory=dict)
 
 
+# noinspection PyNestedDecorators
 class LLMSettings(BaseSettings):
     llm_model_name: str  # Pydantic safe
     llm_model_file: str
@@ -119,18 +120,22 @@ class PubSubSettings(BaseSettings):
     processed_message_topic: str
 
 
+class BrainSettings(BaseSettings):
+    creator_name: str = None
+    use_memories: bool = False
+    save_memories: bool = False
+    add_context: bool = False
+    persona: str = "default_persona"
+
+
 class Config(BaseSettings):
     telegram: Optional[TelegramSettings] = None
     discord: Optional[DiscordSettings] = None
     weaviate: Optional[WeaviateSettings] = None
     llm: Optional[LLMSettings] = None
     pubsub: Optional[PubSubSettings] = None
-    creator_name: str = None
+    brain: Optional[BrainSettings] = None
     llm_type: str = None
-    persona: str = "default_persona"
-    use_memories: bool = False
-    save_memories: bool = False
-    add_context: bool = False
 
 
 class SettingsManager:
@@ -166,17 +171,14 @@ class SettingsManager:
                 self.config.weaviate = WeaviateSettings(**data['weaviate'])
             if 'pubsub' in data:
                 self.config.pubsub = PubSubSettings(**data['pubsub'])
+            if 'brain' in data:
+                self.config.brain = BrainSettings(**data['brain'])
 
             # if 'plugins' in data:
             #     for name, settings in data['plugins'].items():
             #         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
 
             self.config.llm_type = data.get('llm_type', 'default')
-            self.config.persona = data.get("persona", "default_persona")
-            self.config.use_memories = data.get("use_memories", False)
-            self.config.save_memories = data.get("save_memories", False)
-            self.config.add_context = data.get("add_context", False)
-            self.config.creator_name = data.get("creator_name", False)
 
             self.load_llm_settings()
             # self.config.validate()
@@ -231,12 +233,11 @@ class SettingsManager:
             all_settings['weaviate'] = self.config.weaviate.dict()
         if self.config.pubsub:
             all_settings['pubsub'] = self.config.pubsub.dict()
+        if self.config.brain:
+            all_settings['brain'] = self.config.brain.dict()
 
         # all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
         all_settings['llm_type'] = self.config.llm_type
-        all_settings['persona'] = self.config.persona
-        all_settings['use_memories'] = self.config.use_memories
-        all_settings['save_memories'] = self.config.save_memories
 
         try:
             logger.info(f"[SettingsManager/save_settings] Trying to save settings to {self.yaml_path}")
