@@ -18,12 +18,13 @@ class TelegramInterface(BaseInterface):
                  pubsub: 'PubSub',
                  publish_to: str,
                  subscribe_to: str,
+                 creator_username: str
                  ):
         super().__init__(pubsub)
 
         # config variables
         self.CREATOR_ID = config.creator_id
-        self.CREATOR_USERNAME = config.creator_username
+        self.CREATOR_USERNAME = creator_username
         self.publish_to = publish_to
         self.subscribe_to = subscribe_to
         logger.info(f"[TelegramInterface/__init__] Building an Application")
@@ -32,6 +33,7 @@ class TelegramInterface(BaseInterface):
         # for the access in handlers
         self.app.context_types.context.bot_data = {
             "creator_id": self.CREATOR_ID,
+            'creator_username': self.CREATOR_USERNAME,
             'pubsub': self.pubsub,
             'publish_to': self.publish_to
         }

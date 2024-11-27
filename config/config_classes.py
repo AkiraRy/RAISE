@@ -28,16 +28,11 @@ class BaseSettings(BaseModel):
         return f"{self.__class__.__name__}({fields_str})"
 
 
-class TelegramSettings(BaseSettings):
-    # def validate(self):
-    #     errors = []
-    #     if not self.bot_username:
-    #         errors.append("Bot username is required.")
-    #     if self.creator_id <= 0:
-    #         errors.append("Creator ID must be a positive integer.")
-    #     if errors:
-    #         raise ValueError(f"Validation errors in TelegramSettings: {', '.join(errors)}")
+class DiscordSettings(BaseSettings):
+    bot_chat: str = ""
 
+
+class TelegramSettings(BaseSettings):
     bot_username: str = ""
     bot_nickname: str = ""  # used for storing in the vectordb
     creator_id: int = -1  # whitelist
@@ -46,15 +41,6 @@ class TelegramSettings(BaseSettings):
 
 
 class WeaviateSettings(BaseSettings):
-    # def validate(self):
-    #     errors = []
-    #     if not self.class_name:
-    #         errors.append("Class name is required.")
-    #     if not (0 < self.http_port < 65536):
-    #         errors.append("Port must be a valid number between 1 and 65535.")
-    #     if errors:
-    #         raise ValueError(f"Validation errors in WeaviateSettings: {', '.join(errors)}")
-
     author_name: str
     class_name: str = "MemoryK"  # for testing, I will use an already created class
     http_host: str = "localhost"
@@ -75,13 +61,6 @@ class WeaviateSettings(BaseSettings):
 class PluginSettings:  # no idea currently how to make this work. in future fix
     plugin_name: str
     plugin_config: Dict[str, str] = field(default_factory=dict)
-
-
-class DiscordSettings(BaseSettings):
-    # def validate(self):
-    #     raise NotImplemented
-
-    bot_name: str = ""
 
 
 class LLMSettings(BaseSettings):
@@ -146,25 +125,12 @@ class Config(BaseSettings):
     weaviate: Optional[WeaviateSettings] = None
     llm: Optional[LLMSettings] = None
     pubsub: Optional[PubSubSettings] = None
+    creator_name: str = None
     llm_type: str = None
     persona: str = "default_persona"
     use_memories: bool = False
     save_memories: bool = False
     add_context: bool = False
-
-    # plugins: Dict[str, PluginSettings] = field(default_factory=dict)
-    # def validate(self):
-    #     if not self.weaviate:
-    #         raise ValueError("Weaviate must exists")
-    #     if not (self.telegram or self.discord):
-    #         raise ValueError("At least one of Telegram, Discord, or Weaviate settings must be provided.")
-    #
-    #     if self.telegram:
-    #         self.telegram.validate()
-    #     if self.discord:
-    #         self.discord.validate()
-    #     if self.weaviate:
-    #         self.weaviate.validate()
 
 
 class SettingsManager:
@@ -210,6 +176,7 @@ class SettingsManager:
             self.config.use_memories = data.get("use_memories", False)
             self.config.save_memories = data.get("save_memories", False)
             self.config.add_context = data.get("add_context", False)
+            self.config.creator_name = data.get("creator_name", False)
 
             self.load_llm_settings()
             # self.config.validate()
