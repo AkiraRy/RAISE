@@ -239,7 +239,9 @@ class Brain(metaclass=Singleton):
 
     async def _clear_and_fetch_chat_data(self):
         self._cmwsm()
-        await self.fetch_chat_data()
+        if self.use_memories:
+            logger.info(f"[Brain/_clear_and_fetch_chat_data] fetching chat data")
+            await self.fetch_chat_data()
 
     def _cmwsm(self):
         """clear messages without system messages"""
