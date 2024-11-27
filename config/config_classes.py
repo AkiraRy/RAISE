@@ -33,11 +33,7 @@ class DiscordSettings(BaseSettings):
 
 
 class TelegramSettings(BaseSettings):
-    bot_username: str = ""
-    bot_nickname: str = ""  # used for storing in the vectordb
     creator_id: int = -1  # whitelist
-    creator_username: str = ""  # used for storing in the vectordb
-    sticker_path: str = ""
 
 
 class WeaviateSettings(BaseSettings):
@@ -121,11 +117,12 @@ class PubSubSettings(BaseSettings):
 
 
 class BrainSettings(BaseSettings):
-    creator_name: str = None
     use_memories: bool = False
     save_memories: bool = False
     add_context: bool = False
-    persona: str = "default_persona"
+    persona_path: str = "default_persona"
+    creator_name: str = ""
+    assistant_name: str = ""
 
 
 class Config(BaseSettings):

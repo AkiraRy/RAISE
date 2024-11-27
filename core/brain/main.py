@@ -3,7 +3,7 @@ from typing import Optional, List
 from jinja2 import Template
 from utils import Message
 
-from . import logger, PERSONA_DIR
+from . import logger, PERSONA_DIR, BrainSettings
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
 
@@ -21,44 +21,35 @@ class Singleton(type):
 class Brain(metaclass=Singleton):
     def __init__(self, memory_manager: 'Async_DB_Interface',
                  model: Model,
-                 persona_path: str,
-                 user_name: str,
-                 assistant_name: str,
+                 config: BrainSettings,
                  pubsub: 'PubSub',
                  subscribe_to: str,
                  publish_to: str,
-                 use_memories: bool,
-                 save_memories: bool,
-                 add_context: bool,
-                 token_limit: int = 2000
+                 token_limit: int = 2000  # possibly transfer this to llm settings?
                  ):
         # memory_manager - db instance, persona - name of the file where persona is stored
         # Important classes
         self.memory_manager: 'Async_DB_Interface' = memory_manager
         self.model: Model = model
         self.pubsub: 'PubSub' = pubsub
+        self.config: BrainSettings = config
 
         # Config
         self.persona: Optional[str] = None
         self.template: Optional[Template] = None
-        self.user_name: str = user_name
-        self.assistant_name: str = assistant_name
         self.token_limit: int = token_limit
         self.receive_topic: str = subscribe_to
         self.publish_to_topic: str = publish_to
-        self.use_memories: bool = use_memories
-        self.add_context: bool = add_context
-        self.save_memories = save_memories
         self.is_loaded_model: bool = False
 
         # initialization
         self.memories: List[dict] = list()
-        self.load_persona(persona_path)
+        self.load_persona()
         self.pubsub.subscribe(subscribe_to, self.process_message)
 
     async def start(self):
         self.load_model()
-        if self.use_memories:
+        if self.config.use_memories:
             logger.info(f"[Brain/start] initializing chat data/memories")
             await self.fetch_chat_data()
             return
@@ -75,7 +66,7 @@ class Brain(metaclass=Singleton):
         logger.info(f"[Brain/_def_add_to_chat_history] Current total number of tokens is {curr_token}")
 
     async def _save_to_memory(self, message: Message):
-        if not self.save_memories:
+        if not self.config.save_memories:
             logger.info(f"[Brain/_save_to_memory] Saving to memory ignored.")
             return
 
@@ -87,7 +78,7 @@ class Brain(metaclass=Singleton):
             time=message.datetime
         )
         mem_chain.add_object(
-            from_name=self.assistant_name,
+            from_name=self.config.assistant_name,
             message=message.response_message,
             time=datetime.datetime.now().astimezone()
         )
@@ -117,7 +108,7 @@ class Brain(metaclass=Singleton):
         did_add_context = False
         # 2. Getting context for user query.
         # make it in separate function
-        if self.add_context:
+        if self.config.add_context:
             context_mem_chain = await self.memory_manager.get_context(content)
             did_add_context = self._render_persona_with_context(context_mem_chain)
             if not did_add_context:
@@ -137,7 +128,7 @@ class Brain(metaclass=Singleton):
         await self._save_to_memory(message)
 
         # 5. cleaning chat history (optional)
-        if not self.use_memories:
+        if not self.config.use_memories:
             logger.info(f"[Brain/process_message] clearing chat info from history")
             self._cmwsm()  # leaves only system prompt
 
@@ -171,9 +162,9 @@ class Brain(metaclass=Singleton):
         self.is_loaded_model = is_loaded
         return is_loaded
 
-    def load_persona(self, persona_path) -> None:
+    def load_persona(self) -> None:
         try:
-            path = PERSONA_DIR / f"{persona_path}.txt"
+            path = PERSONA_DIR / f"{self.config.persona_path}.txt"
             logger.info(f"[Brain/load_persona] Trying to load AI Persona from file at {path}")
 
             with open(path, 'r', encoding='utf-8') as f:
@@ -239,7 +230,7 @@ class Brain(metaclass=Singleton):
 
     async def _clear_and_fetch_chat_data(self):
         self._cmwsm()
-        if self.use_memories:
+        if self.config.use_memories:
             logger.info(f"[Brain/_clear_and_fetch_chat_data] fetching chat data")
             await self.fetch_chat_data()
 
@@ -261,7 +252,7 @@ class Brain(metaclass=Singleton):
 
         for memory in fetchedMemories.memories:
             self.memories.append({
-                'role': 'user' if self.user_name == memory.from_name else 'assistant',
+                'role': 'user' if self.config.creator_name == memory.from_name else 'assistant',
                 'content': memory.message
             })
 

@@ -38,15 +38,10 @@ async def main():
         # memory_manager=weaviate_db,
         memory_manager=None,
         model=model,
-        persona_path=settings_manager.config.persona,
-        user_name=settings_manager.config.creator_username,
-        assistant_name=telegram_settings.bot_nickname,
+        config=settings_manager.config.brain,
         pubsub=pubsub_system,
         publish_to=settings_manager.config.pubsub.processed_message_topic,
         subscribe_to=settings_manager.config.pubsub.input_message_topic,
-        save_memories=settings_manager.config.save_memories,
-        use_memories=settings_manager.config.use_memories,
-        add_context=settings_manager.config.add_context
     )
 
     tg_interface = TelegramInterface(
@@ -55,7 +50,7 @@ async def main():
         pubsub=pubsub_system,
         publish_to=settings_manager.config.pubsub.input_message_topic,
         subscribe_to=settings_manager.config.pubsub.processed_message_topic,
-        creator_username=settings_manager.config.creator_name
+        creator_username=settings_manager.config.brain.creator_name
     )
 
     pubsub_system.start()
