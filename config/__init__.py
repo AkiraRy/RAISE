@@ -1,4 +1,4 @@
-from .config_classes import SettingsManager, WeaviateSettings, TelegramSettings, LLMSettings, BrainSettings
+from .config_classes import SettingsManager, WeaviateSettings, TelegramSettings, LLMSettings, BrainSettings, DiscordSettings
 from .settings import (BACKUP_DIR,
                        CONFIG_DIR,
                        PROFILES_DIR,
