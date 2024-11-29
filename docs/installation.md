@@ -8,7 +8,7 @@ First step is always to either download zip and extract it or run
 git clone https://github.com/AkiraRy/RAISE.git
 ```
 
-Second step is to set up environment
+Second step is to set up environment. If you don't want to use discord or telegram, then simply delete the line form environment.yaml that contains certain library
 ```
 conda env create -f environment.yaml
 ```

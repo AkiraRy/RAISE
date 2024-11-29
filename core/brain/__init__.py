@@ -7,7 +7,8 @@ from config import (PROFILES_DIR,
                     SettingsManager,
                     LLM_SETTINGS_DIR,
                     PROMPT_TEMPLATES_DIR,
-                    PERSONA_DIR)
+                    PERSONA_DIR,
+                    BrainSettings)
 
 
 @dataclass

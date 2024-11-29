@@ -28,33 +28,16 @@ class BaseSettings(BaseModel):
         return f"{self.__class__.__name__}({fields_str})"
 
 
-class TelegramSettings(BaseSettings):
-    # def validate(self):
-    #     errors = []
-    #     if not self.bot_username:
-    #         errors.append("Bot username is required.")
-    #     if self.creator_id <= 0:
-    #         errors.append("Creator ID must be a positive integer.")
-    #     if errors:
-    #         raise ValueError(f"Validation errors in TelegramSettings: {', '.join(errors)}")
+class DiscordSettings(BaseSettings):
+    bot_chat: int = -1  # Bot will only use dedicated chat for conversation
+    creator_id: int = -1
 
-    bot_username: str = ""
-    bot_nickname: str = ""  # used for storing in the vectordb
+
+class TelegramSettings(BaseSettings):
     creator_id: int = -1  # whitelist
-    creator_username: str = ""  # used for storing in the vectordb
-    sticker_path: str = ""
 
 
 class WeaviateSettings(BaseSettings):
-    # def validate(self):
-    #     errors = []
-    #     if not self.class_name:
-    #         errors.append("Class name is required.")
-    #     if not (0 < self.http_port < 65536):
-    #         errors.append("Port must be a valid number between 1 and 65535.")
-    #     if errors:
-    #         raise ValueError(f"Validation errors in WeaviateSettings: {', '.join(errors)}")
-
     author_name: str
     class_name: str = "MemoryK"  # for testing, I will use an already created class
     http_host: str = "localhost"
@@ -77,13 +60,7 @@ class PluginSettings:  # no idea currently how to make this work. in future fix
     plugin_config: Dict[str, str] = field(default_factory=dict)
 
 
-class DiscordSettings(BaseSettings):
-    # def validate(self):
-    #     raise NotImplemented
-
-    bot_name: str = ""
-
-
+# noinspection PyNestedDecorators
 class LLMSettings(BaseSettings):
     llm_model_name: str  # Pydantic safe
     llm_model_file: str
@@ -140,31 +117,23 @@ class PubSubSettings(BaseSettings):
     processed_message_topic: str
 
 
+class BrainSettings(BaseSettings):
+    use_memories: bool = False
+    save_memories: bool = False
+    add_context: bool = False
+    persona_path: str = "default_persona"
+    creator_name: str = ""
+    assistant_name: str = ""
+
+
 class Config(BaseSettings):
     telegram: Optional[TelegramSettings] = None
     discord: Optional[DiscordSettings] = None
     weaviate: Optional[WeaviateSettings] = None
     llm: Optional[LLMSettings] = None
     pubsub: Optional[PubSubSettings] = None
+    brain: Optional[BrainSettings] = None
     llm_type: str = None
-    persona: str = "default_persona"
-    use_memories: bool = False
-    save_memories: bool = False
-    add_context: bool = False
-
-    # plugins: Dict[str, PluginSettings] = field(default_factory=dict)
-    # def validate(self):
-    #     if not self.weaviate:
-    #         raise ValueError("Weaviate must exists")
-    #     if not (self.telegram or self.discord):
-    #         raise ValueError("At least one of Telegram, Discord, or Weaviate settings must be provided.")
-    #
-    #     if self.telegram:
-    #         self.telegram.validate()
-    #     if self.discord:
-    #         self.discord.validate()
-    #     if self.weaviate:
-    #         self.weaviate.validate()
 
 
 class SettingsManager:
@@ -200,16 +169,14 @@ class SettingsManager:
                 self.config.weaviate = WeaviateSettings(**data['weaviate'])
             if 'pubsub' in data:
                 self.config.pubsub = PubSubSettings(**data['pubsub'])
+            if 'brain' in data:
+                self.config.brain = BrainSettings(**data['brain'])
 
             # if 'plugins' in data:
             #     for name, settings in data['plugins'].items():
             #         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
 
             self.config.llm_type = data.get('llm_type', 'default')
-            self.config.persona = data.get("persona", "default_persona")
-            self.config.use_memories = data.get("use_memories", False)
-            self.config.save_memories = data.get("save_memories", False)
-            self.config.add_context = data.get("add_context", False)
 
             self.load_llm_settings()
             # self.config.validate()
@@ -264,12 +231,11 @@ class SettingsManager:
             all_settings['weaviate'] = self.config.weaviate.dict()
         if self.config.pubsub:
             all_settings['pubsub'] = self.config.pubsub.dict()
+        if self.config.brain:
+            all_settings['brain'] = self.config.brain.dict()
 
         # all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
         all_settings['llm_type'] = self.config.llm_type
-        all_settings['persona'] = self.config.persona
-        all_settings['use_memories'] = self.config.use_memories
-        all_settings['save_memories'] = self.config.save_memories
 
         try:
             logger.info(f"[SettingsManager/save_settings] Trying to save settings to {self.yaml_path}")

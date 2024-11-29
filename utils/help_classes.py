@@ -3,7 +3,7 @@ from telegram.ext import CallbackContext
 from typing import Optional
 from datetime import datetime
 from telegram import Update
-
+from discord.message import Message as Msg
 
 @dataclass
 class TextMessage:
@@ -38,3 +38,8 @@ class Message:
 class TelegramMessage(Message):
     update: Update = field(default=None)
     context: CallbackContext = field(default=None)
+
+
+@dataclass
+class DiscordMessage(Message):
+    channel: Msg.channel = field(default=None)

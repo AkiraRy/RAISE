@@ -47,9 +47,9 @@ async def send_message_from_pubsub(message: TelegramMessage):
 async def handle_message(update: Update, context: CallbackContext):
     pubsub = context.bot_data['pubsub']
     topic = context.bot_data['publish_to']
+    creator_name = context.bot_data['creator_username']
 
     sender = update.message.from_user
-    sender_full_name = sender.full_name
     message_from_user = update.message.text
     now = datetime.datetime.now()
     datetime_msg = datetime.datetime.now().astimezone()
@@ -58,7 +58,7 @@ async def handle_message(update: Update, context: CallbackContext):
     logger.debug(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
     telegram_message = TelegramMessage(
         id=update.message.id,
-        from_user=sender_full_name,
+        from_user=creator_name,
         datetime=datetime_msg,
         text_content=TextMessage(message_from_user),
         update=update,

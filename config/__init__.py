@@ -1,4 +1,4 @@
-from .config_classes import SettingsManager, WeaviateSettings, TelegramSettings, LLMSettings
+from .config_classes import SettingsManager, WeaviateSettings, TelegramSettings, LLMSettings, BrainSettings, DiscordSettings
 from .settings import (BACKUP_DIR,
                        CONFIG_DIR,
                        PROFILES_DIR,
@@ -8,5 +8,6 @@ from .settings import (BACKUP_DIR,
                        BASE_DIR,
                        MODEL_DIR,
                        PROMPT_TEMPLATES_DIR,
-                       PERSONA_DIR)
+                       PERSONA_DIR,
+                       COGS_DIR)
 from .settings import logger
