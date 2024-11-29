@@ -1,19 +1,21 @@
 # Here I will try to explain what each setting do in the default config
 
 * `llm_type: llava`          str This variable specifies which model settings profile to use
-* `persona: default_persona` str This is the name of your AI persona file located at `assets/persona_description`
-* `use_memories: true`      bool Whether to fetch last 20(default) messages from db when you start your client fresh. Also, if to include current messages in the chat to history
-* `save_memories: true`     bool If you want to save your messages to the vector db.
-* `add_context: true`       bool On each message you send to your AI assistant it will try to fetch similar message for the additional context.
+* 'brain':
+    - `add_context: true`       bool On each message you send to your AI assistant it will try to fetch similar message for the additional context.
+    - `assistant_name: # Raise`                           str This is how you want to call your assistant
+    - `creator_name: # Should be your accounts name, not @` str Your name
+    - `persona_path: default_persona` str This is the name of your AI persona file located at `assets/persona_description`
+    - `use_memories: true`      bool Whether to fetch last 20(default) messages from db when you start your client fresh. Also, if to include current messages in the chat to history
+    - `save_memories: true`     bool If you want to save your messages to the vector db.
 * `pubsub:`                      Here is config for Publish subscribe system. Should be left as it is. Unless you know what you're doing.
    - `input_message_topic: message_received`         str Name of the topic to which communication module publishes message from the user. Later preprocessed by the brain.
    - `processed_message_topic: message_preprocessed` str Name of the topic to which brain publishes response from an AI. Later sent to the user using communication module.
 * `telegram:`                    Here is config for telegram communication module. In future if you don't want to use telegram, but discord or gui instead. Simply delete this part.
-   - `bot_nickname: # ai_assistant`                            str This is how you named your bot in telegram
-   - `bot_username: # @ai_assistant`                           str This is how you can find your bot in telegram using @
-   - `creator_id: # str, for filtering messages`               str By default bots on telegram are publicly available. Meaning anyone can access your bot. You can get this id simply by putting some random numbers her. Then trying to message something to your bot and grab the id from the console logs
-   - `creator_username: # Should be your accounts name, not @` str Your name in telegram. 
-   - `sticker_path: '' # in future`                            Currently will do nothing. In future AI assistant will be able to send you stickers if certain threshold is exceeded
+   - `creator_id: # str, for filtering messages`               str By default bots on telegram are publicly available. Meaning anyone can access your bot. You can get this id simply by putting some random numbers her. Then trying to message something to your bot and grab the id from the console logs 
+* 'discord':
+   - `creator_id: # str, for filtering messages`               str By default bots on telegram are publicly available. Meaning anyone can access your bot. You can get this id simply by putting some random numbers her. Then trying to message something to your bot and grab the id from the console logs 
+   - 'bot_chat' # int simply right-click on a message channel and copy its id. Assistant will use it to communicate with you
 * `weaviate:`
    - `alpha: 0.5`                                                               str This variable is used in the hybrid similarity search. Higher values will prioritise more vector search while lower values will prioritise more keyword search.
    - `author_name: # str your name under which this program will save memories` str This should be the same as creator_username in telegram module. Used this to store user instance in the vector db and also search based on this variable.

@@ -22,22 +22,22 @@ class AIAssistant:
     async def stop(self):
         logger.info(f'[AIAssistant/stop] stopping the Application.')
         self.brain.close()
-        # await self.brain.memory_manager.close()
+        await self.brain.memory_manager.close()
         logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
 
 async def main():
     token = os.getenv("DISCORD_TOKEN")
     settings_manager = SettingsManager().load_settings()
-    # weaviate_base_url = 'http://127.0.0.1:8000'
-    # weaviate_db = WeaviateHelper(weaviate_base_url)
+    weaviate_base_url = 'http://127.0.0.1:8000'
+    weaviate_db = WeaviateHelper(weaviate_base_url)
 
     telegram_settings = settings_manager.config.telegram
     model = Model(settings_manager.config.llm)
     pubsub_system = PubSub(pooling_delay=0.1)
     brain = Brain(
-        # memory_manager=weaviate_db,
-        memory_manager=None,
+        memory_manager=weaviate_db,
+        # memory_manager=None,
         model=model,
         config=settings_manager.config.brain,
         pubsub=pubsub_system,
