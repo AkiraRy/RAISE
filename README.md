@@ -70,8 +70,8 @@ Here I will write my current progress and what I wish to implement in the future
 ### Communication
 | Platform       | Status |
 |----------------|--------|
-| Telegram       | 🟡     |
-| Discord        | 🔴     |
+| Telegram       | 🟢     |
+| Discord        | 🟢     |
 | GUI            | 🔴     |
 
 ### Backend
