@@ -1,47 +1,36 @@
-import asyncio
-from . import BaseInterface, logger, DiscordSettings
+import os
+
 import discord
+from . import logger, DiscordSettings, COGS_DIR
 from discord.ext import commands
+from .cogs import *
 
 
-class DiscordInterface(BaseInterface):
-    def __init__(self,
-                 token,
+class RaiseBot(commands.Bot):
+    def __init__(self, command_prefix,
                  config: DiscordSettings,
                  pubsub: 'PubSub',
                  publish_to: str,
                  subscribe_to: str,
-                 creator_username: str
+                 creator_username: str,
+                 intents
                  ):
-
-        super().__init__(pubsub)
-        self.CREATOR_ID = config.creator_id
-        self.CREATOR_USERNAME = creator_username
+        super().__init__(command_prefix=command_prefix, intents=intents)
+        self.config = config
+        self.pubsub = pubsub
+        self.creator_username = creator_username
         self.publish_to = publish_to
         self.subscribe_to = subscribe_to
-        self.token = token
-        intents = discord.Intents.default()
-        intents.message_content = True
-        intents.members = True
-        self.client = commands.Bot(command_prefix="!", intents=intents, heartbeat_interval=60.0)
 
-    def initialize(self):
-        pass
+    async def load_cogs(self, cogs_to_load):
+        cogs = [cog for cog in os.listdir(COGS_DIR) if cog.endswith(".py") and (cogs_to_load == "*" or cog[:-3] in cogs_to_load)]
 
-    def stop(self):
-        pass
+        for cog in cogs:
+            cog = f"{COGS_DIR}.{cog[:-3]}"
+            await self.load_extension(cog)
+            logger.info(f"[RaiseBot/load_cogs] Loaded {cog}")
 
-    def manage_event_loop(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        logger.info('[DiscordInterface/manage_even_loop] Created new event loop')
-        return loop
-
-    def run(self):
-        try:
-            loop = self.manage_event_loop()
-            self.initialize()
-            logger.info(f"[DiscordInterface/run] Starting an Application.")
-            loop.run_until_complete(self.client.run(token=self.token))
-        except Exception as e:
-            logger.exception("An error occurred in the bot thread: %s", e)
+    async def on_ready(self):
+        logger.info(f"[RaiseBot/on_ready] Bot is ready")
+        channel = self.get_channel(self.config.bot_chat)
+        await channel.send("I'm ready!")
