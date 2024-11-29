@@ -2,7 +2,7 @@ import asyncio
 import os
 from config import SettingsManager, logger
 from core import Weaviate, Async_DB_Interface, Brain, Model, PubSub, WeaviateHelper
-from communication import TelegramInterface, BaseInterface
+from communication import TelegramInterface, BaseInterface, DiscordInterface
 
 
 class AIAssistant:
@@ -14,6 +14,7 @@ class AIAssistant:
 
     async def start(self):
         await self.brain.start()
+        await self.communication.initialize()
         self.communication_thread = self.communication.start_in_thread()
         await asyncio.sleep(1)
         logger.info(f'[AIAssistant/start] Application is ready to use.')
@@ -21,12 +22,12 @@ class AIAssistant:
     async def stop(self):
         logger.info(f'[AIAssistant/stop] stopping the Application.')
         self.brain.close()
-        await self.brain.memory_manager.close()
+        # await self.brain.memory_manager.close()
         logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
 
 async def main():
-    token = os.getenv("TG_TOKEN")
+    token = os.getenv("DISCORD_TOKEN")
     settings_manager = SettingsManager().load_settings()
     # weaviate_base_url = 'http://127.0.0.1:8000'
     # weaviate_db = WeaviateHelper(weaviate_base_url)
@@ -44,9 +45,17 @@ async def main():
         subscribe_to=settings_manager.config.pubsub.input_message_topic,
     )
 
-    tg_interface = TelegramInterface(
+    # tg_interface = TelegramInterface(
+    #     token=token,
+    #     config=telegram_settings,
+    #     pubsub=pubsub_system,
+    #     publish_to=settings_manager.config.pubsub.input_message_topic,
+    #     subscribe_to=settings_manager.config.pubsub.processed_message_topic,
+    #     creator_username=settings_manager.config.brain.creator_name
+    # )
+    ds_interface = DiscordInterface(
         token=token,
-        config=telegram_settings,
+        config=settings_manager.config.discord,
         pubsub=pubsub_system,
         publish_to=settings_manager.config.pubsub.input_message_topic,
         subscribe_to=settings_manager.config.pubsub.processed_message_topic,
@@ -54,7 +63,7 @@ async def main():
     )
 
     pubsub_system.start()
-    ai = AIAssistant(settings_manager, tg_interface, brain)
+    ai = AIAssistant(settings_manager, ds_interface, brain)
 
     await ai.start()
 

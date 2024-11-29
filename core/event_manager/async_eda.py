@@ -99,7 +99,12 @@ class PubSub:
     async def _propagate_to_listeners(self, listeners: List[Callable[[Any], Coroutine]], message: Message):
         """Send the message to all registered listeners for a topic."""
         for listener in listeners:
-            asyncio.create_task(listener(message))
+            # await listener(message)
+            if asyncio.iscoroutinefunction(listener):
+                asyncio.create_task(listener(message))
+            else:
+                logger.warning(f"[PubSub/_propagate_to_listeners] Listener is not a coroutine: {listener}")
+                listener(message)
 
     def unsubscribe(self, topic: str, handler: Callable[[Any], Coroutine]) -> None:
         """Unsubscribe a handler from a given topic."""
