@@ -3,13 +3,13 @@ import datetime
 
 import discord
 from discord.ext import commands, tasks
-from utils import Message, TextMessage, DiscordMessage
+from utils import TextMessage, DiscordMessage
 from .. import logger
 
-from discord.message import Message
 
 class MessageCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
+        self.ms_task_started = False
         self.bot = bot
         self.message = None
         self.lock = asyncio.Lock()
@@ -17,9 +17,10 @@ class MessageCog(commands.Cog):
     async def cog_load(self) -> None:
         # as in receive response form pubsub, then send this message to discord
         self.bot.pubsub.subscribe(self.bot.subscribe_to, self.save_message)
-        self.ms.start()
 
     def cog_unload(self):
+        if not self.ms_task_started:
+            return
         self.ms.cancel()
 
     async def save_message(self, message):
@@ -27,31 +28,38 @@ class MessageCog(commands.Cog):
             self.message = message
             logger.info(f"[MessageCog/save_message] Saved {message} to the context")
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        if not self.ms_task_started:
+            logger.info("[MessageCog/on_ready] Starting periodic message loop.")
+            await asyncio.sleep(5)
+            self.ms.start()
+            self.ms_task_started = True
+
     @tasks.loop(seconds=1)
     async def ms(self):
         try:
             async with self.lock:
-                if self.message is None:
+                if not self.message:
                     return
 
-                logger.info("[MessageCog/ms] Sending message to bot chat")
-                await self.send_message(self.message)
-                self.message = None
-        except Exception as e:
-            logger.error(f"[MessageCog/ms] Error in ms loop: {e}")
+                id_channel = self.bot.config.bot_chat
+                channel = self.bot.get_channel(id_channel)
 
-    async def send_message(self, message: DiscordMessage):
-        try:
-            logger.info(f"[MessageCog/send_message] inside THIS")
-            content = message.response_message
-            if not content:
-                content = 'Something went wrong. No response was generated'
-            logger.info(f"[MessageCog/send_message] {content}")
-            # channel = self.bot.get_channel(self.bot.config.bot_chat)
-            # logger.info(f"[MessageCog/send_message] after channel getter")
-            await message.channel.send(content)
-        except Exception as e:
-            logger.error(f"[MessageCog/send_message] Unexpectedly got an error {e}")
+                if not channel:
+                    logger.error(f"[MessageCog/ms] Channel with ID {id_channel} not found.")
+                    return
+
+                logger.debug(f"[MessageCog/ms] Sending periodic message to channel {channel.name} (ID: {id_channel})")
+                async with asyncio.timeout(5):
+                    await channel.send(self.message.response_message)
+                    self.message = None
+        except discord.Forbidden:
+            logger.error("[MessageCog/ms] Bot lacks permission to send messages.")
+        except discord.HTTPException as e:
+            logger.error(f"[MessageCog/ms] HTTP Exception while sending message: {e}")
+        except asyncio.TimeoutError:
+            logger.error("[MessageCog/ms] Timeout while sending message.")
 
     @commands.Cog.listener(name="on_message")
     async def handle_message(self, message: discord.Message) -> None:
@@ -62,7 +70,6 @@ class MessageCog(commands.Cog):
 
         sender_id = message.author.id
         msg_content = message.content
-        nowtime = datetime.datetime.now()
         datetime_msg = datetime.datetime.now().astimezone()
 
         logger.debug(
@@ -75,9 +82,9 @@ class MessageCog(commands.Cog):
             text_content=TextMessage(msg_content),
             channel=message.channel
         )
-        logger.info(f"[MessageCog/handle_message] Sendi ng processed message class to pubsub.")
+        logger.info(f"[MessageCog/handle_message] Sending processed message class to pubsub.")
         self.bot.pubsub.publish(self.bot.publish_to, msg_cls)
-        # await message.channel.typing()
+        await message.channel.typing()
 
 
 async def setup(bot: commands.Bot) -> None:

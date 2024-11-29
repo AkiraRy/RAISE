@@ -17,11 +17,7 @@ class DiscordInterface(BaseInterface):
 
         super().__init__(pubsub)
         self.token = token
-
-        # intents = discord.Intents.default()
         intents = discord.Intents.all()
-        # intents.message_content = True
-        # intents.members = True
         self.bot = RaiseBot(command_prefix="!",
                             intents=intents,
                             config=config,
@@ -48,6 +44,6 @@ class DiscordInterface(BaseInterface):
             logger.info(f"[DiscordInterface/run] Starting an Application.")
             loop.run_until_complete(self.bot.start(token=self.token))
         except Exception as e:
-            logger.exception("An error occurred in the bot thread: %s", e)
+            logger.exception("[DiscordInterface/run] An error occurred in the bot thread: %s", e)
         finally:
             loop.close()

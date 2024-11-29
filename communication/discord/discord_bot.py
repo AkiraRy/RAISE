@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import traceback
@@ -34,13 +35,14 @@ class RaiseBot(commands.Bot):
         logger.info(f"[RaiseBot/on_ready] Bot is ready")
         channel = self.get_channel(self.config.bot_chat)
         await channel.send("I'm ready!")
-        await self.tree.sync()  # Sync all app commands with Discord
+        await self.tree.sync()
 
     async def on_application_command_error(self, interaction: discord.Interaction,
                                            error: discord.app_commands.AppCommandError):
         logger.error('[RaiseBot/on_application_command_error] Ignoring exception in command tree', exc_info=error)
 
     async def on_error(self, event, *args, **kwargs):
+        return
         logger.exception(f'[RaiseBot/on_error] Ignoring exception in {event}')
         error_message = f"{traceback.format_exc()}"
         logger.error(f"[RaiseBot/on_error] {error_message}")
