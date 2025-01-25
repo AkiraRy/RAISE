@@ -88,7 +88,7 @@ Here I will write my current progress and what I wish to implement in the future
 
 ## Plans for the future
 
-1. discord bot implementation similar to telegram
+1. discord bot implementation similar to telegram !DONE
 2. A gui app that will support streaming from the mode. Also using gui you won't need to use discord/telegram
 3. Classifier for user queries to enable llm use different module. Like web search, weather forecast and so on
 4. Decouple PubSub and communication module from brain using server/client module between them instead.

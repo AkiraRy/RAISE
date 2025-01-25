@@ -1,4 +1,4 @@
-test.py
+plugins/test.py
 TODO
 .env
 .idea
@@ -11,3 +11,6 @@ assets/TODO.md
 *.yaml
 *.json
 *.gguf
+*.mp3
+test.*
+*.log
