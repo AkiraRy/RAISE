@@ -1,10 +1,10 @@
 import asyncio
 import os
 from enum import Enum
-
 from config import SettingsManager, logger
 from core import Brain, Model, PubSub, WeaviateHelper
 from communication import TelegramInterface, BaseInterface, DiscordInterface
+from utils import start_server_handler, terminate_process
 import argparse
 
 
@@ -168,15 +168,21 @@ if __name__ == "__main__":
         exit(0)
 
     try:
+        process_server, process_id = start_server_handler()
+    except Exception as e:
+        logger.error(f"Error starting server_handler: {e}")
+        exit(1)
+
+    try:
         if communication_module == Platform.DISCORD:
             asyncio.run(discord())
         elif communication_module == Platform.TELEGRAM:
             asyncio.run(telegram())
-
         else:
             raise RuntimeError("Undetected cocmunication module")
     except KeyboardInterrupt:
         pass
     except asyncio.exceptions.CancelledError:
         pass
-    
+
+    terminate_process(process_server)
