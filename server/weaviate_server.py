@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     if not await weaviate_db.connect():  # if not connected raise error
         logger.error(f"[weaviate_server/lifespan] Weaviate instance is not reachable. Check if you're running db instance in docker")
         raise RuntimeError("Couldn't connect to db instance")
+    # logger.info(f"[weaviate_server/lifespan] Server is running")
     yield
     logger.info(f'[weaviate_server/lifespan] Closing connection to weaviate db and shutting down the application')
     await weaviate_db.close()
