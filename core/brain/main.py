@@ -48,7 +48,8 @@ class Brain(metaclass=Singleton):
         self.pubsub.subscribe(subscribe_to, self.process_message)
 
     async def start(self):
-        self.load_model()
+        if not self.load_model():
+            raise RuntimeError("[Brain/start] Couldnt load model.")
         if self.config.use_memories:
             logger.info(f"[Brain/start] initializing chat data/memories")
             await self.fetch_chat_data()
@@ -158,9 +159,8 @@ class Brain(metaclass=Singleton):
             logger.error("[Brain/load_model] No settings in the model.")
             return False
 
-        is_loaded = self.model.load_model()
-        self.is_loaded_model = is_loaded
-        return is_loaded
+        self.is_loaded_model = self.model.load_model()
+        return self.is_loaded_model
 
     def load_persona(self) -> None:
         try:
