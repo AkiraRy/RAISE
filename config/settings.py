@@ -11,6 +11,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent.parent
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_FILE = LOGS_DIR / 'infos.log'
+WEAVIATE_LOG_FILE = LOGS_DIR / 'weaviate.logs'
 
 # Settings
 CONFIG_DIR = BASE_DIR / 'config'
@@ -56,18 +57,30 @@ LOGGING_CONFIG = {
             'class': "logging.StreamHandler",
             'formatter': "standard"
         },
-        "file": {
+        "file": {  # base logging, to a predefined file.
             'level': "INFO",
             'class': "logging.FileHandler",
             'filename': f"{LOGS_FILE}",
             'mode': "w",
             'formatter': "verbose"
         },
+        "weaviate_file": {
+            'level': "DEBUG",
+            'class': "logging.FileHandler",
+            'filename': f"{WEAVIATE_LOG_FILE}",
+            'mode': "w",
+            'formatter': "verbose"
+        }
     },
     "loggers": {
         "programming": {
             'handlers': ['console'],
             "level": "DEBUG",
+            "propagate": False
+        },
+        "weaviate_logger": {  # New logger for the weaviate logs
+            'handlers': ['weaviate_file'],
+            "level": "INFO",
             "propagate": False
         },
     }

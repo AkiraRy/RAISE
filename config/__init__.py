@@ -10,4 +10,4 @@ from .settings import (BACKUP_DIR,
                        PROMPT_TEMPLATES_DIR,
                        PERSONA_DIR,
                        COGS_DIR)
-from .settings import logger
+from .settings import logger, get_logger

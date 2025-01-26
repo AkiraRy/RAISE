@@ -6,9 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from core import Weaviate, MemoryChain
-from config import SettingsManager, logger
+from config import SettingsManager, get_logger
 
-
+logger = get_logger("weaviate_logger")
 settings_manager = SettingsManager().load_settings()
 weaviate_db = Weaviate(settings_manager.config.weaviate)
 
@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"[weaviate_server/lifespan] Weaviate instance is not reachable. Check if you're running db instance in docker")
         raise RuntimeError("Couldn't connect to db instance")
     logger.info(f"[weaviate_server/lifespan] Server is running")
+    print(f"Server is running")  # for starting purposes, since we wait for this info in the start process
     yield
     logger.info(f'[weaviate_server/lifespan] Closing connection to weaviate db and shutting down the application')
     await weaviate_db.close()
