@@ -26,8 +26,8 @@ class DiscordInterface(BaseInterface):
                             creator_username=creator_username,
                             pubsub=pubsub)
 
-    def initialize(self):
-        self.bot.load_cogs()
+    async def initialize(self):
+        await self.bot.load_cogs()
 
     def stop(self):
         pass
