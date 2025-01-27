@@ -113,7 +113,6 @@ async def add_memories(request: AddMemoriesRequest):
     return {"status": "success", "message": "Memories added successfully"}
 
 
-
 @app.get("/get_context")
 async def get_context(query: str):
     logger.info(f"[weaviate_server/get_context] get request. Requesting context for user query {query}")

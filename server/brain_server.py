@@ -34,17 +34,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.post("/messages")
-async def create_message(message: Message_server):
+@app.post("/generate")
+async def generate_response(message: Message_server):
     global brain
-    # Validate the message
-    if not message.is_valid():
-        raise HTTPException(
-            status_code=400,
-            detail="At least one of text_content, photo_content, or voice_content must be provided."
-        )
-    # Simulate saving the message to the database (in-memory for now)
     response_message = await brain.process_message(message=message)
+    # add preprocessing, egg if failed return status failed
     return {"status": "success", "message": response_message}
 
 

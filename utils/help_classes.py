@@ -37,6 +37,7 @@ class Message:
     response_message: Optional[str] = None
 
 
+# use this later
 class PhotoMessage_server(BaseModel):
     image: bytes  # Store image as bytes.
 
@@ -49,13 +50,13 @@ class Message_server(BaseModel):
     id: int
     from_user: str
     datetime: datetime
-    text_content: Optional[str] = None
-    photo_content: Optional[PhotoMessage] = None
-    voice_content: Optional[VoiceMessage] = None
+    text_content: str
 
-    def is_valid(self) -> bool:
-        """Ensure at least one of text_content, photo_content, or voice_content is non-None."""
-        return any([self.text_content, self.photo_content, self.voice_content])
+    def dict(self, **kwargs):
+        # Convert datetime to ISO format
+        data = super().dict(**kwargs)
+        data["datetime"] = self.datetime.isoformat()
+        return data
 
 
 @dataclass
