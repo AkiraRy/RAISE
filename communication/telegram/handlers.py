@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 
-from utils import TextMessage, TelegramMessage
+from utils import TextMessage, TelegramMessage, Message_server
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
 from telegram.constants import ChatAction, ParseMode
@@ -69,6 +69,34 @@ async def handle_message(update: Update, context: CallbackContext):
 
     # asyncio.create_task(context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING))
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+
+
+async def handle_message_server(update: Update, context: CallbackContext):
+    creator_name = context.bot_data['creator_username']
+    brain_helper = context.bot_data['brain']
+
+    sender = update.message.from_user
+    message_from_user = update.message.text
+    datetime_msg = datetime.datetime.now().astimezone()
+    # add library or regex to filter out emojis
+
+    logger.debug(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
+    message_srv = Message_server(
+        id=update.message.id,
+        from_user=creator_name,
+        datetime=datetime_msg,
+        text_content=message_from_user
+    )
+
+    logger.info(f"[Telegram/handle_message] Sending message to brain handler")
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+
+    response = await brain_helper.generate_response(message_srv)
+    if response is None:
+        await update.message.reply_text("No generated response")
+        return
+
+    await update.message.reply_text(response)
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):

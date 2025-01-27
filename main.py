@@ -2,7 +2,7 @@ import asyncio
 import os
 from enum import Enum
 from config import SettingsManager, logger
-from core import Brain, Model, PubSub, WeaviateHelper
+from core import BrainHelper
 from communication import TelegramInterface, BaseInterface, DiscordInterface
 from utils import start_server_handler, terminate_process
 import argparse
@@ -26,7 +26,7 @@ class Platform(Enum):
 
 
 class AIAssistant:
-    def __init__(self, settings_manager: SettingsManager, communication: BaseInterface, brain: Brain):
+    def __init__(self, settings_manager: SettingsManager, communication: BaseInterface, brain: BrainHelper):
         self.settings_manager = settings_manager
         self.communication = communication
         self.communication_thread = None
@@ -40,17 +40,14 @@ class AIAssistant:
             self.communication.initialize()
 
     async def start(self):
-        await self.brain.start()
         await self.initialize()
         self.communication_thread = self.communication.start_in_thread()
         await asyncio.sleep(2)
         logger.info(f'[AIAssistant/start] Application is ready to use.')
 
     async def stop(self):
+        await self.brain.close()
         logger.info(f'[AIAssistant/stop] stopping the Application.')
-        self.brain.close()
-        await self.brain.memory_manager.close()
-        # self.communication.stop()
         logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
 
@@ -62,31 +59,14 @@ async def discord():
 
     # Modules
 
-    # Core
-    weaviate_db = WeaviateHelper(weaviate_base_url)
-    model = Model(settings_manager.config.llm)
-    pubsub_system = PubSub(pooling_delay=0.1)
-    brain = Brain(
-            memory_manager=weaviate_db,
-            model=model,
-            config=settings_manager.config.brain,
-            pubsub=pubsub_system,
-            publish_to=settings_manager.config.pubsub.processed_message_topic,
-            subscribe_to=settings_manager.config.pubsub.input_message_topic,
-    )
-
     # Communication
     ds_interface = DiscordInterface(
         token=ds_token,
         config=settings_manager.config.discord,
-        pubsub=pubsub_system,
-        publish_to=settings_manager.config.pubsub.input_message_topic,
-        subscribe_to=settings_manager.config.pubsub.processed_message_topic,
         creator_username=settings_manager.config.brain.creator_name
     )
 
-    pubsub_system.start()
-    ai = AIAssistant(settings_manager, ds_interface, brain)
+    ai = AIAssistant(settings_manager, ds_interface)
 
     await ai.start()
 
@@ -99,7 +79,6 @@ async def discord():
         pass
     finally:
         await ai.stop()
-        pubsub_system.stop()
 
 
 async def telegram():
@@ -107,32 +86,19 @@ async def telegram():
     telegram_token = os.getenv("TG_TOKEN")
     settings_manager = SettingsManager().load_settings()
     weaviate_base_url = 'http://127.0.0.1:8000'
+    brain_base_url = 'http://127.0.0.1:8001'
 
     # Modules
-    weaviate_db = WeaviateHelper(weaviate_base_url)
     telegram_settings = settings_manager.config.telegram
-    model = Model(settings_manager.config.llm)
-    pubsub_system = PubSub(pooling_delay=0.1)
-    brain = Brain(
-        memory_manager=weaviate_db,
-        model=model,
-        config=settings_manager.config.brain,
-        pubsub=pubsub_system,
-        publish_to=settings_manager.config.pubsub.processed_message_topic,
-        subscribe_to=settings_manager.config.pubsub.input_message_topic,
-    )
-
+    brain_helper = BrainHelper(brain_base_url)
     tg_interface = TelegramInterface(
         token=telegram_token,
         config=telegram_settings,
-        pubsub=pubsub_system,
-        publish_to=settings_manager.config.pubsub.input_message_topic,
-        subscribe_to=settings_manager.config.pubsub.processed_message_topic,
-        creator_username=settings_manager.config.brain.creator_name
+        creator_username=settings_manager.config.brain.creator_name,
+        brain=brain_helper
     )
 
-    pubsub_system.start()
-    ai = AIAssistant(settings_manager, tg_interface, brain)
+    ai = AIAssistant(settings_manager, tg_interface, brain_helper)
     await ai.start()
 
     try:
@@ -144,7 +110,6 @@ async def telegram():
         pass
     finally:
         await ai.stop()
-        pubsub_system.stop()
 
 
 if __name__ == "__main__":
@@ -165,13 +130,19 @@ if __name__ == "__main__":
         communication_module = Platform.from_input(args.platform)
     except ValueError as e:
         print(e)
-        exit(0)
-
-    try:
-        process_server, process_id = start_server_handler()
-    except Exception as e:
-        logger.error(f"Error starting server_handler: {e}")
         exit(1)
+
+    # try:
+    #     process_server_weaviate, process_id = start_server_handler("server.weaviate_server:app", 8000)
+    # except Exception as e:
+    #     logger.error(f"Error starting server_handler: {e}")
+    #     exit(1)
+    #
+    # try:
+    #     process_server_brain, process_id = start_server_handler("server.brain_server:app", 8001)
+    # except Exception as e:
+    #     logger.error(f"Error starting brain_server: {e}")
+    #     exit(1)
 
     try:
         if communication_module == Platform.DISCORD:
@@ -185,4 +156,4 @@ if __name__ == "__main__":
     except asyncio.exceptions.CancelledError:
         pass
 
-    terminate_process(process_server)
+    # terminate_process(process_server)

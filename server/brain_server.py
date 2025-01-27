@@ -41,6 +41,9 @@ async def generate_response(message: Message_server):
     # add preprocessing, egg if failed return status failed
     return {"status": "success", "message": response_message}
 
+# TODO
+# add endpoints for voice/photo interference
+
 
 # noinspection PyAsyncCall
 @app.post("/shutdown")
