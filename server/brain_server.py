@@ -2,10 +2,9 @@ import asyncio
 import os
 import signal
 from contextlib import asynccontextmanager
-
+from utils import Message_server
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from core import Brain, Model, MemoryChain, WeaviateHelper
+from core import Brain, Model, WeaviateHelper
 from config import SettingsManager, logger
 
 
@@ -24,73 +23,44 @@ brain = Brain(
 # noinspection PyUnusedLocal,PyShadowingNames
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global brain
+    # global brain
     logger.info(f'[brain_server/lifespan] Starting brain and application')
     await brain.start()
     yield
     logger.info(f'[brain_server/lifespan] Stopping brain and shutting down the application')
-    await brain.close()
+    brain.close()
 
 # Initialize FastAPI app
 app = FastAPI(lifespan=lifespan)
 
-#
-# class AddMemoriesRequest(BaseModel):
-#     memory_chain: list[dict]
-#
-#
-# class DeleteMemoryRequest(BaseModel):
-#     uuid: str
-#
-#
-# # noinspection PyAsyncCall
-# @app.post("/shutdown")
-# async def shutdown_server():
-#     try:
-#         logger.info("[weaviate_server/shutdown] Received shutdown request. Shutting down the server.")
-#         await weaviate_db.close()
-#
-#         async def shutdown_task():
-#             await asyncio.sleep(1)  # Give time for the response to complete
-#             os.kill(os.getpid(), signal.SIGTERM)
-#
-#         asyncio.create_task(shutdown_task())
-#         return {"status": "success", "message": "Server is shutting down"}
-#     except Exception as e:
-#         logger.error(f"Error during shutdown: {e}")
-#         raise HTTPException(status_code=500, detail=f"Failed to shutdown server: {str(e)}")
-#
-#
-# @app.get("/is_alive")
-# async def is_alive():
-#     try:
-#         logger.info(f"[weaviate_server/is_alive] get request. checking if weaviate is still alive.")
-#         is_live = await weaviate_db.is_alive()
-#         if is_live:
-#             logger.info(f"[weaviate_server/is_alive] get request completed. weaviate is still alive.")
-#             return {"status": "success", "message": "Weaviate is alive and connected"}
-#
-#         logger.error(f"[weaviate_server/is_alive] get request completed. weaviate is not alive.")
-#         raise HTTPException(status_code=503, detail="Weaviate is not reachable")
-#     except Exception as e:
-#         logger.error(f"Error checking Weaviate status: {str(e)}")
-#         raise HTTPException(status_code=500, detail="Failed to check Weaviate status")
-#
-#
-# @app.post("/add_memories")
-# async def add_memories(request: AddMemoriesRequest):
-#     logger.info(f"[weaviate_server/add_memories] post request. Trying to add memories.")
-#     memory_chain = MemoryChain()
-#     for memory in request.memory_chain:
-#         memory_chain.add_object(
-#             from_name=memory["from_name"],
-#             message=memory["message"],
-#             time=memory["time"],
-#         )
-#     success = await weaviate_db.add_memories(memory_chain)
-#     if not success:
-#         logger.waerning(f"[weaviate_server/add_memories] post request. Couldn't add memories successfully.")
-#         raise HTTPException(status_code=500, detail="Failed to add memories")
-#
-#     logger.info(f"[weaviate_server/add_memories] post request. Successfully added memories.")
-#     return {"status": "success", "message": "Memories added successfully"}
+
+@app.post("/messages")
+async def create_message(message: Message_server):
+    global brain
+    # Validate the message
+    if not message.is_valid():
+        raise HTTPException(
+            status_code=400,
+            detail="At least one of text_content, photo_content, or voice_content must be provided."
+        )
+    # Simulate saving the message to the database (in-memory for now)
+    response_message = await brain.process_message(message=message)
+    return {"status": "success", "message": response_message}
+
+
+# noinspection PyAsyncCall
+@app.post("/shutdown")
+async def shutdown_server():
+    try:
+        logger.info("[brain_server/shutdown] Received shutdown request. Shutting down the brain.")
+        await brain.close()
+
+        async def shutdown_task():
+            await asyncio.sleep(1)  # Give time for the response to complete
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        asyncio.create_task(shutdown_task())
+        return {"status": "success", "message": "Server is shutting down"}
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to shutdown server: {str(e)}")
