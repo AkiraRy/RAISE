@@ -45,33 +45,6 @@ async def send_message_from_pubsub(message: TelegramMessage):
 
 
 async def handle_message(update: Update, context: CallbackContext):
-    pubsub = context.bot_data['pubsub']
-    topic = context.bot_data['publish_to']
-    creator_name = context.bot_data['creator_username']
-
-    sender = update.message.from_user
-    message_from_user = update.message.text
-    now = datetime.datetime.now()
-    datetime_msg = datetime.datetime.now().astimezone()
-    # add library or regex to filter out emojis
-
-    logger.debug(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
-    telegram_message = TelegramMessage(
-        id=update.message.id,
-        from_user=creator_name,
-        datetime=datetime_msg,
-        text_content=TextMessage(message_from_user),
-        update=update,
-        context=context
-    )
-    logger.info(f"[Telegram/handle_message] Sending processed message class to pubsub.")
-    pubsub.publish(topic, telegram_message)
-
-    # asyncio.create_task(context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING))
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-
-
-async def handle_message_server(update: Update, context: CallbackContext):
     creator_name = context.bot_data['creator_username']
     brain_helper = context.bot_data['brain']
 
