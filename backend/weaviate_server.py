@@ -4,6 +4,7 @@ import signal
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from core import Weaviate, MemoryChain
 from config import SettingsManager, get_logger
@@ -29,6 +30,11 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI app
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
 
 
 class AddMemoriesRequest(BaseModel):

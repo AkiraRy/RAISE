@@ -4,7 +4,7 @@ from enum import Enum
 from config import SettingsManager, logger
 from core import BrainHelper
 from communication import TelegramInterface, BaseInterface, DiscordInterface
-from utils import start_server_handler, terminate_process
+from utils import start_server_handler, terminate_process # add if checker if those endpoints exists
 import argparse
 
 
@@ -133,13 +133,13 @@ if __name__ == "__main__":
         exit(1)
 
     # try:
-    #     process_server_weaviate, process_id = start_server_handler("server.weaviate_server:app", 8000)
+    #     process_server_weaviate, process_id = start_server_handler("backend.weaviate_server:app", 8000)
     # except Exception as e:
     #     logger.error(f"Error starting server_handler: {e}")
     #     exit(1)
     #
     # try:
-    #     process_server_brain, process_id = start_server_handler("server.brain_server:app", 8001)
+    #     process_server_brain, process_id = start_server_handler("backend.brain_server:app", 8001)
     # except Exception as e:
     #     logger.error(f"Error starting brain_server: {e}")
     #     exit(1)
