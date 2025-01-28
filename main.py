@@ -2,9 +2,9 @@ import asyncio
 import os
 from enum import Enum
 from config import SettingsManager, logger
-from core import BrainHelper
+from core import BrainHelper, WeaviateHelper
 from communication import TelegramInterface, BaseInterface, DiscordInterface
-from utils import start_server_handler, terminate_process # add if checker if those endpoints exists
+from utils import start_server_handler, terminate_process # add if checker if those endpoints exists make a helper function in utils
 import argparse
 
 
@@ -26,11 +26,12 @@ class Platform(Enum):
 
 
 class AIAssistant:
-    def __init__(self, settings_manager: SettingsManager, communication: BaseInterface, brain: BrainHelper):
+    def __init__(self, settings_manager: SettingsManager, communication: BaseInterface, brain: BrainHelper, memory: WeaviateHelper):
         self.settings_manager = settings_manager
         self.communication = communication
-        self.communication_thread = None
+        # self.communication_thread = None
         self.brain = brain
+        self.memory = memory
 
     async def initialize(self):
         # Temporary fix
@@ -46,7 +47,9 @@ class AIAssistant:
         logger.info(f'[AIAssistant/start] Application is ready to use.')
 
     async def stop(self):
-        await self.brain.close()
+        # add here stopping of servers if necessary
+        # self.memory.close()
+        # self.brain.close()
         logger.info(f'[AIAssistant/stop] stopping the Application.')
         logger.info(f'[AIAssistant/stop] Application stopped successfully')
 
@@ -85,12 +88,14 @@ async def telegram():
     # Settings, env values
     telegram_token = os.getenv("TG_TOKEN")
     settings_manager = SettingsManager().load_settings()
-    weaviate_base_url = 'http://127.0.0.1:8000'
+    weaviate_base_url = 'http://127.0.0.1:8000'  # add to config
     brain_base_url = 'http://127.0.0.1:8001'
 
     # Modules
     telegram_settings = settings_manager.config.telegram
     brain_helper = BrainHelper(brain_base_url)
+    memory_helper = WeaviateHelper(weaviate_base_url)
+
     tg_interface = TelegramInterface(
         token=telegram_token,
         config=telegram_settings,
@@ -98,7 +103,7 @@ async def telegram():
         brain=brain_helper
     )
 
-    ai = AIAssistant(settings_manager, tg_interface, brain_helper)
+    ai = AIAssistant(settings_manager, tg_interface, brain_helper, memory_helper)
     await ai.start()
 
     try:

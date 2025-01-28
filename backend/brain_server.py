@@ -5,8 +5,10 @@ from contextlib import asynccontextmanager
 from utils import Message_server
 from fastapi import FastAPI, HTTPException
 from core import Brain, Model, WeaviateHelper
-from config import SettingsManager, logger
+from config import SettingsManager, get_logger
+from fastapi.responses import RedirectResponse
 
+logger = get_logger("brain_logger")
 
 settings_manager = SettingsManager().load_settings()
 weaviate_base_url = 'http://127.0.0.1:8000'
@@ -32,6 +34,11 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI app
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
 
 
 @app.post("/generate")

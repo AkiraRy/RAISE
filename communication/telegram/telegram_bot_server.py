@@ -51,8 +51,9 @@ class TelegramInterface(BaseInterface):
 
     def stop(self):
         logger.warning(f"[telegram_bot/stop] Not implemented on windows")
+        raise NotImplemented()
 
-    def manage_event_loop(self):
+    def manage_event_loop(self): # doesnt need this since it is running on 1 thread only?
         """
         Creates a new event loop and runs the asynchronous tasks.
         This method should be called when using asyncio-based models.
@@ -65,7 +66,6 @@ class TelegramInterface(BaseInterface):
     def run(self):
         try:
             loop = self.manage_event_loop()
-            self.initialize()
             logger.info(f"[Telegram/run] Starting an Application.")
             loop.run_until_complete(self.app.run_polling(drop_pending_updates=True))
         except Exception as e:

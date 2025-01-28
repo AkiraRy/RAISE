@@ -15,6 +15,7 @@ class BrainHelper:
             data = message.dict()
             logger.info(f'[BrainHelper/generate_response] Sending a post request for response generation')
             response = await self.client.post(url, json=data)
+            logger.debug(f"[BrainHelper/generate_response]  response: {response}")
             if response.status_code == 200:
                 logger.info(f'[BrainHelper/generate_response] Response generated successfully')
                 return response.json()['message']  # This is probably dangerous :smok:
