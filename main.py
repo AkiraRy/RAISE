@@ -4,7 +4,7 @@ from enum import Enum
 from config import SettingsManager, logger
 from core import BrainHelper, WeaviateHelper
 from communication import TelegramInterface, BaseInterface, DiscordInterface
-from utils import start_server_handler, terminate_process # add if checker if those endpoints exists make a helper function in utils
+from utils import start_server_handler, terminate_process  # add if checker, if those endpoints exists make a helper function in utils
 import argparse
 
 
@@ -59,17 +59,22 @@ async def discord():
     ds_token = os.getenv("DISCORD_TOKEN")
     settings_manager = SettingsManager().load_settings()
     weaviate_base_url = 'http://127.0.0.1:8000'
+    brain_base_url = 'http://127.0.0.1:8001'
 
     # Modules
+    discord_settings = settings_manager.config.discord
+    brain_helper = BrainHelper(brain_base_url)
+    memory_helper = WeaviateHelper(weaviate_base_url)
 
     # Communication
     ds_interface = DiscordInterface(
         token=ds_token,
-        config=settings_manager.config.discord,
-        creator_username=settings_manager.config.brain.creator_name
+        config=discord_settings,
+        creator_username=settings_manager.config.brain.creator_name,
+        brain=brain_helper
     )
 
-    ai = AIAssistant(settings_manager, ds_interface)
+    ai = AIAssistant(settings_manager, ds_interface, brain_helper, memory_helper)
 
     await ai.start()
 
@@ -124,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--platform",
         choices=["d", "t", "discord", "telegram"],
-        default="telegram",
+        default="discord",
         help="Specify the communication module to use. Use 'discord' or 'd' for Discord, 'telegram' or 't' for Telegram. "
              "Default is 'telegram'."
     )
@@ -155,7 +160,7 @@ if __name__ == "__main__":
         elif communication_module == Platform.TELEGRAM:
             asyncio.run(telegram())
         else:
-            raise RuntimeError("Undetected cocmunication module")
+            raise RuntimeError("Undetected communication module")
     except KeyboardInterrupt:
         pass
     except asyncio.exceptions.CancelledError:

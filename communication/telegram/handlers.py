@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 
-from utils import TextMessage, TelegramMessage, Message_server
+from utils import Message_server
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
 from telegram.constants import ChatAction, ParseMode
@@ -32,16 +32,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # it is still kinda same update, but i have no idea why they changed it to object
     logger.error(f'[error] USER({update.message.chat.id}) in {update.message.chat.type}: {context.error} from {update}')
 
-
-async def send_message_from_pubsub(message: TelegramMessage):
-    # We will get this object form PUBSUB
-    try:
-        content = message.response_message
-        if not content:
-            content = 'Something went wrong. No response was generated'
-        await message.update.message.reply_text(content)
-    except Exception as e:
-        logger.error(f"[Telegram/send_message_from_pubsub] Unexpectedly got an error {e}")
 
 
 async def handle_message(update: Update, context: CallbackContext):
