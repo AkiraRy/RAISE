@@ -227,6 +227,18 @@ async def delete_by_uuid(weaviate_db: WeaviateBase, uuid: str):
     )
 
 
+async def delete_batch_by_uuid(weaviate_db: WeaviateBase, uuids: list[str], dry_run=False, verbose=False):
+    if not uuids:
+        return
+
+    collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+    return await collection.data.delete_many(
+        where=Filter.by_id().contains_any(uuids),
+        dry_run=dry_run,
+        verbose=verbose
+    )
+
+
 async def get_by_uuid(weaviate_db: WeaviateBase, uuid: str):
     assert isinstance(uuid, str) and uuid is not None, "Faulty value of uuid"
     collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)

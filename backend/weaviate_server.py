@@ -161,3 +161,17 @@ async def get_chat_memory(limit: int = 20):
             for memory in chat_memory.memories
         ]
     }
+
+
+@app.delete("/delete_batch")
+async def delete_batch(number: int = 0):
+    if number < 1:
+        return {"status": "success", "message": f"No messages were deleted :happydays:"}
+
+    logger.info(f"[weaviate_server/delete_batch] Deleting last {number} memories")
+    was_successful = await weaviate_db.delete_last_n_memories(number)
+    if not was_successful:
+        logger.info(f"[weaviate_server/delete_batch] Failed to delete last {number} memories")
+        raise HTTPException(status_code=500, detail=f"Failed to delete last {number} memories")
+    logger.info(f"[weaviate_server/delete_batch] Successfully deleted last {number} messages")
+    return {"status": "success", "message": f"Successfully deleted last {number} messages"}
