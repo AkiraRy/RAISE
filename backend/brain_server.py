@@ -45,6 +45,7 @@ async def root():
 async def generate_response(message: Message_server):
     global brain
     response_message = await brain.process_message(message=message)
+    logger.debug(f"[brain_server/generate_response] generated response {response_message}")
     # add preprocessing, egg if failed return status failed
     return {"status": "success", "message": response_message}
 
@@ -57,7 +58,7 @@ async def generate_response(message: Message_server):
 async def shutdown_server():
     try:
         logger.info("[brain_server/shutdown] Received shutdown request. Shutting down the brain.")
-        await brain.close()
+        brain.close()
 
         async def shutdown_task():
             await asyncio.sleep(1)  # Give time for the response to complete

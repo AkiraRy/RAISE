@@ -111,7 +111,7 @@ class Brain(metaclass=Singleton):
 
         # 3. Response generation
         logger.info(f"[Brain/process_message] Generating an llm response")
-        logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
+        # logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
         response_content, usage, generation_time = self.model.generate(self.memories)
         # message.response_message = response_content.content
         logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")

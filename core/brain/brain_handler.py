@@ -14,10 +14,11 @@ class BrainHelper:
         try:
             data = message.dict()
             logger.info(f'[BrainHelper/generate_response] Sending a post request for response generation')
-            response = await self.client.post(url, json=data)
+            response = await self.client.post(url, json=data, timeout=30)
             logger.debug(f"[BrainHelper/generate_response]  response: {response}")
             if response.status_code == 200:
                 logger.info(f'[BrainHelper/generate_response] Response generated successfully')
+                logger.debug(f'[BrainHelper/generate_response] Response {response.json()["message"]}')
                 return response.json()['message']  # This is probably dangerous :smok:
             logger.error(f"[BrainHelper/generate_response] Failed to generated response {response.status_code}: {response.text}")
             return None

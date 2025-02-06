@@ -85,6 +85,7 @@ class MessageCog(commands.Cog):
         logger.info(f"[MessageCog/handle_message] Sending message to brain handler")
         await message.channel.typing()
         response = await self.bot.brain_helper.generate_response(msg_cls)
+
         if response is None:
             await message.channel.send(f"No Generated Response")
             return
