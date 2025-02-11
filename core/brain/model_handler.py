@@ -87,7 +87,7 @@ class Model:
         # created = response['created']  # unix time
         choices = response['choices'][0]
         response_content = ResponseContent(
-            content=choices['text'],
+            content=choices['text'].removeprefix("assistant"),
             finish_reason=choices['finish_reason']
         )
         usage = Usage(**response['usage'])
