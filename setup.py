@@ -21,9 +21,7 @@ async def setup_main_collection_weaviate():
 
 def download_llm():
     settings = SettingsManager().load_settings()
-    llm_settings = settings.config.llm
-
-    model_download(llm_settings)
+    model_download(settings)
 
 
 if __name__ == '__main__':
