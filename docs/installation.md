@@ -48,7 +48,7 @@ Now mostly everything is set up. We got 2 thing left to do.
 
 1. Config
 
-For detailed information look in [docs](docs/configs.md)
+For detailed information look in [docs](configs.md)
 
 You can create multiple configs in the `config/profiles`. All of them should follow default_settings.yaml structure
 If you want to use custom profile, then you should change the `SETTINGS_FILE` variable in `config/settings.py` to your desired profile.
