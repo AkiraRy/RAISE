@@ -55,15 +55,10 @@ If you want to use custom profile, then you should change the `SETTINGS_FILE` va
 
 `llm_type` Should be named the same as your llm settings file name in the `config/llm_settings` dir\
 In your llm settings:\
-`llm_model_name`: should be a name of the repo on hf. example: `cjpais/llava-1.6-mistral-7b-gguf`\
-`llm_model_file`: mode file name you're going to use from that repo. example : `llava-v1.6-mistral-7b.Q3_K_XS.gguf`
+`llm_model_name`: should be a name of the repo on hf. example: `Qwen/Qwen2.5-7B-Instruct-GGUF`\
+`llm_model_file`: start of the mode file name you're going to use from that repo. Should be without models parts number. example : `qwen2.5-7b-instruct-q4_k_m`
 
-(Currently only telegram interface is supported.)
-You need to specify each setting in the `telegram` section
-Here is [link](<https://www.directual.com/lesson-library/how-to-create-a-telegram-bot>) which will help you set up your own bot in the telegram.
-
-If you haven't edited docker-compose file, then most settings in the weaviate can be left as they are. 
-You only need to specify `author_name` and `class_name` 
+You only need to specify `author_name` and `class_name` in the `weaviate` section of config. 
 
 2. environment variables 
 

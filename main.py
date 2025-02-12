@@ -58,8 +58,8 @@ async def discord():
     # Settings, env values
     ds_token = os.getenv("DISCORD_TOKEN")
     settings_manager = SettingsManager().load_settings()
-    weaviate_base_url = 'http://127.0.0.1:8000'
-    brain_base_url = 'http://127.0.0.1:8001'
+    weaviate_base_url = f'http://{settings_manager.config.weaviate.server_host}:{settings_manager.config.weaviate.server_port}'
+    brain_base_url = f'http://{settings_manager.config.brain.server_host}:{settings_manager.config.brain.server_port}'
 
     # Modules
     discord_settings = settings_manager.config.discord
@@ -93,8 +93,8 @@ async def telegram():
     # Settings, env values
     telegram_token = os.getenv("TG_TOKEN")
     settings_manager = SettingsManager().load_settings()
-    weaviate_base_url = 'http://127.0.0.1:8000'  # add to config
-    brain_base_url = 'http://127.0.0.1:8001'
+    weaviate_base_url = f'http://{settings_manager.config.weaviate.server_host}:{settings_manager.config.weaviate.server_port}'  # add to config
+    brain_base_url = f'http://{settings_manager.config.brain.server_host}:{settings_manager.config.brain.server_port}'
 
     # Modules
     telegram_settings = settings_manager.config.telegram
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--platform",
         choices=["d", "t", "discord", "telegram"],
-        default="discord",
+        default="telegram",
         help="Specify the communication module to use. Use 'discord' or 'd' for Discord, 'telegram' or 't' for Telegram. "
              "Default is 'telegram'."
     )
@@ -142,17 +142,17 @@ if __name__ == "__main__":
         print(e)
         exit(1)
 
-    # try:
-    #     process_server_weaviate, process_id = start_server_handler("backend.weaviate_server:app", 8000)
-    # except Exception as e:
-    #     logger.error(f"Error starting server_handler: {e}")
-    #     exit(1)
-    #
-    # try:
-    #     process_server_brain, process_id = start_server_handler("backend.brain_server:app", 8001)
-    # except Exception as e:
-    #     logger.error(f"Error starting brain_server: {e}")
-    #     exit(1)
+    try:
+        process_server_weaviate, process_id = start_server_handler("backend.weaviate_server:app", 8000) # use config here
+    except Exception as e:
+        logger.error(f"Error starting server_handler: {e}")
+        exit(1)
+
+    try:
+        process_server_brain, process_id = start_server_handler("backend.brain_server:app", 8001)
+    except Exception as e:
+        logger.error(f"Error starting brain_server: {e}")
+        exit(1)
 
     try:
         if communication_module == Platform.DISCORD:
@@ -166,4 +166,5 @@ if __name__ == "__main__":
     except asyncio.exceptions.CancelledError:
         pass
 
-    # terminate_process(process_server)
+    terminate_process(process_server_weaviate)
+    terminate_process(process_server_brain)
