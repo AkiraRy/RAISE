@@ -3,28 +3,23 @@ from . import BaseInterface, logger, DiscordSettings
 from .discord_bot import RaiseBot
 import discord
 from discord.ext import commands
+from core import BrainHelper
 
 
 class DiscordInterface(BaseInterface):
     def __init__(self,
                  token,
                  config: DiscordSettings,
-                 pubsub: 'PubSub',
-                 publish_to: str,
-                 subscribe_to: str,
-                 creator_username: str
+                 creator_username: str,
+                 brain: BrainHelper
                  ):
-
-        super().__init__(pubsub)
         self.token = token
         intents = discord.Intents.all()
         self.bot = RaiseBot(command_prefix="!",
                             intents=intents,
                             config=config,
-                            publish_to=publish_to,
-                            subscribe_to=subscribe_to,
                             creator_username=creator_username,
-                            pubsub=pubsub)
+                            brain=brain)
 
     async def initialize(self):
         await self.bot.load_cogs()

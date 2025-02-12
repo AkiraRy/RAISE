@@ -7,26 +7,22 @@ from telegram.ext import (Application,
                           TypeHandler,
                           )
 
-from .handlers import handle_message, send_message_from_pubsub, error_handler, help_command, start_command, whitelist_user
+from .handlers import handle_message, error_handler, help_command, start_command, whitelist_user
 from . import BaseInterface, TelegramSettings, logger
+from core import BrainHelper
 
 
 class TelegramInterface(BaseInterface):
     def __init__(self,
                  token,
                  config: TelegramSettings,
-                 pubsub: 'PubSub',
-                 publish_to: str,
-                 subscribe_to: str,
-                 creator_username: str
-                 ):
-        super().__init__(pubsub)
+                 creator_username: str,
+                 brain: BrainHelper):
 
         # config variables
         self.CREATOR_ID = config.creator_id
         self.CREATOR_USERNAME = creator_username
-        self.publish_to = publish_to
-        self.subscribe_to = subscribe_to
+        self.brain = brain
         logger.info(f"[TelegramInterface/__init__] Building an Application")
         self.app: Application = Application.builder().token(token).build()
 
@@ -34,13 +30,10 @@ class TelegramInterface(BaseInterface):
         self.app.context_types.context.bot_data = {
             "creator_id": self.CREATOR_ID,
             'creator_username': self.CREATOR_USERNAME,
-            'pubsub': self.pubsub,
-            'publish_to': self.publish_to
+            "brain": self.brain
         }
 
         self.job_queue = self.app.job_queue
-        logger.info(f'[TelegramInterface/__init__] Subscribed to {self.subscribe_to}')
-        self.pubsub.subscribe(self.subscribe_to, send_message_from_pubsub)
         # self.job_queue.run_repeating()
 
     def initialize(self):
@@ -57,8 +50,9 @@ class TelegramInterface(BaseInterface):
 
     def stop(self):
         logger.warning(f"[telegram_bot/stop] Not implemented on windows")
+        raise NotImplemented()
 
-    def manage_event_loop(self):
+    def manage_event_loop(self): # doesnt need this since it is running on 1 thread only?
         """
         Creates a new event loop and runs the asynchronous tasks.
         This method should be called when using asyncio-based models.
@@ -71,7 +65,6 @@ class TelegramInterface(BaseInterface):
     def run(self):
         try:
             loop = self.manage_event_loop()
-            self.initialize()
             logger.info(f"[Telegram/run] Starting an Application.")
             loop.run_until_complete(self.app.run_polling(drop_pending_updates=True))
         except Exception as e:

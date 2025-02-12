@@ -52,7 +52,8 @@ class WeaviateSettings(BaseSettings):
     alpha: float = 0.5  # 1 pure vector search, 0 pure keyword search
     limit: int = 2
     sim_search_type: str = 'hybrid'
-
+    server_host: str = "localhost"
+    server_port: int = 8000
 
 @dataclass
 class PluginSettings:  # no idea currently how to make this work. in future fix
@@ -124,6 +125,8 @@ class BrainSettings(BaseSettings):
     persona_path: str = "default_persona"
     creator_name: str = ""
     assistant_name: str = ""
+    server_host: str = "localhost"
+    server_port: int = 8001
 
 
 class Config(BaseSettings):

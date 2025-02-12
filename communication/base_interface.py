@@ -3,9 +3,6 @@ from abc import ABC, abstractmethod
 
 
 class BaseInterface(ABC):
-    def __init__(self, pubsub: 'PubSub'):
-        self.pubsub = pubsub
-
     @abstractmethod
     def run(self):
         pass

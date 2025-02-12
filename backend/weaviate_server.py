@@ -4,11 +4,12 @@ import signal
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from core import Weaviate, MemoryChain
-from config import SettingsManager, logger
+from config import SettingsManager, get_logger
 
-
+logger = get_logger("weaviate_logger")
 settings_manager = SettingsManager().load_settings()
 weaviate_db = Weaviate(settings_manager.config.weaviate)
 
@@ -21,12 +22,19 @@ async def lifespan(app: FastAPI):
     if not await weaviate_db.connect():  # if not connected raise error
         logger.error(f"[weaviate_server/lifespan] Weaviate instance is not reachable. Check if you're running db instance in docker")
         raise RuntimeError("Couldn't connect to db instance")
+    logger.info(f"[weaviate_server/lifespan] Server is running")
+    print(f"Server is running")  # for starting purposes, since we wait for this info in the start process
     yield
     logger.info(f'[weaviate_server/lifespan] Closing connection to weaviate db and shutting down the application')
     await weaviate_db.close()
 
 # Initialize FastAPI app
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
 
 
 class AddMemoriesRequest(BaseModel):
@@ -111,7 +119,6 @@ async def add_memories(request: AddMemoriesRequest):
     return {"status": "success", "message": "Memories added successfully"}
 
 
-
 @app.get("/get_context")
 async def get_context(query: str):
     logger.info(f"[weaviate_server/get_context] get request. Requesting context for user query {query}")
@@ -154,3 +161,17 @@ async def get_chat_memory(limit: int = 20):
             for memory in chat_memory.memories
         ]
     }
+
+
+@app.delete("/delete_batch")
+async def delete_batch(number: int = 0):
+    if number < 1:
+        return {"status": "success", "message": f"No messages were deleted :happydays:"}
+
+    logger.info(f"[weaviate_server/delete_batch] Deleting last {number} memories")
+    was_successful = await weaviate_db.delete_last_n_memories(number)
+    if not was_successful:
+        logger.info(f"[weaviate_server/delete_batch] Failed to delete last {number} memories")
+        raise HTTPException(status_code=500, detail=f"Failed to delete last {number} memories")
+    logger.info(f"[weaviate_server/delete_batch] Successfully deleted last {number} messages")
+    return {"status": "success", "message": f"Successfully deleted last {number} messages"}

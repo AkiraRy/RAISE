@@ -7,24 +7,21 @@ import discord
 from . import logger, DiscordSettings, COGS_DIR
 from discord.ext import commands
 from .cogs import cogs
+from core import BrainHelper
 
 
 class RaiseBot(commands.Bot):
     def __init__(self, command_prefix,
                  config: DiscordSettings,
-                 pubsub: 'PubSub',
-                 publish_to: str,
-                 subscribe_to: str,
                  creator_username: str,
-                 intents
+                 intents,
+                 brain: BrainHelper
                  ):
 
         super().__init__(command_prefix=command_prefix, intents=intents)
         self.config = config
-        self.pubsub = pubsub
         self.creator_username = creator_username
-        self.publish_to = publish_to
-        self.subscribe_to = subscribe_to
+        self.brain_helper = brain
 
     async def load_cogs(self):
         for cog in cogs:
@@ -42,7 +39,7 @@ class RaiseBot(commands.Bot):
         logger.error('[RaiseBot/on_application_command_error] Ignoring exception in command tree', exc_info=error)
 
     async def on_error(self, event, *args, **kwargs):
-        return
+        # return ????
         logger.exception(f'[RaiseBot/on_error] Ignoring exception in {event}')
         error_message = f"{traceback.format_exc()}"
         logger.error(f"[RaiseBot/on_error] {error_message}")

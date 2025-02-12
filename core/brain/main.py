@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional, List
 from jinja2 import Template
-from utils import Message
+from utils import Message_server
 
 from . import logger, PERSONA_DIR, BrainSettings
 from ..memory import MemoryChain, Async_DB_Interface
@@ -22,33 +22,29 @@ class Brain(metaclass=Singleton):
     def __init__(self, memory_manager: 'Async_DB_Interface',
                  model: Model,
                  config: BrainSettings,
-                 pubsub: 'PubSub',
-                 subscribe_to: str,
-                 publish_to: str,
                  token_limit: int = 2000  # possibly transfer this to llm settings?
                  ):
+
         # memory_manager - db instance, persona - name of the file where persona is stored
         # Important classes
         self.memory_manager: 'Async_DB_Interface' = memory_manager
         self.model: Model = model
-        self.pubsub: 'PubSub' = pubsub
         self.config: BrainSettings = config
 
         # Config
         self.persona: Optional[str] = None
         self.template: Optional[Template] = None
         self.token_limit: int = token_limit
-        self.receive_topic: str = subscribe_to
-        self.publish_to_topic: str = publish_to
         self.is_loaded_model: bool = False
 
         # initialization
         self.memories: List[dict] = list()
-        self.load_persona()
-        self.pubsub.subscribe(subscribe_to, self.process_message)
 
     async def start(self):
-        self.load_model()
+        self.load_persona()
+
+        if not self.load_model():
+            raise RuntimeError("[Brain/start] Couldnt load model.")
         if self.config.use_memories:
             logger.info(f"[Brain/start] initializing chat data/memories")
             await self.fetch_chat_data()
@@ -65,7 +61,7 @@ class Brain(metaclass=Singleton):
         curr_token = self.forget()
         logger.info(f"[Brain/_def_add_to_chat_history] Current total number of tokens is {curr_token}")
 
-    async def _save_to_memory(self, message: Message):
+    async def _save_to_memory(self, message: Message_server, response: str):
         if not self.config.save_memories:
             logger.info(f"[Brain/_save_to_memory] Saving to memory ignored.")
             return
@@ -74,12 +70,12 @@ class Brain(metaclass=Singleton):
         mem_chain = MemoryChain()
         mem_chain.add_object(
             from_name=message.from_user,
-            message=message.text_content.content,
+            message=message.text_content,
             time=message.datetime
         )
         mem_chain.add_object(
             from_name=self.config.assistant_name,
-            message=message.response_message,
+            message=response,
             time=datetime.datetime.now().astimezone()
         )
         saved = await self.memory_manager.add_memories(memory_chain=mem_chain)
@@ -87,12 +83,11 @@ class Brain(metaclass=Singleton):
         if not saved:
             logger.error("[Brain/_save_to_memory] couldn't save memories")
 
-    async def process_message(self, message: Message):
+    async def process_message(self, message: Message_server) -> str:
         if not self.is_loaded_model:
             logger.warning(f"[Brain/process_message] Model({self.model.llm_settings.llm_model_name}) is not loaded")
-            message.response_message = f'Model({self.model.llm_settings.llm_model_name}) is not loaded.'
-            self.pubsub.publish(self.publish_to_topic, message)
-            return
+            response_message = f'Model({self.model.llm_settings.llm_model_name}) is not loaded.'
+            return response_message
 
         # 0 Is to get last 20 memories.
         # We delete cached chat data and fetch last 20 messages from the db.
@@ -100,8 +95,8 @@ class Brain(metaclass=Singleton):
         await self._clear_and_fetch_chat_data()
 
         # 1. Getting current memories with user input
-        content = message.text_content.content
-        logger.debug(f'[Brain/process_message] Got message from {self.receive_topic}, content: {content}')
+        content = message.text_content
+        logger.debug(f'[Brain/process_message] Got message from {message.from_user}, content: {content}')
 
         self._add_to_chat_history('user', content)
 
@@ -116,16 +111,16 @@ class Brain(metaclass=Singleton):
 
         # 3. Response generation
         logger.info(f"[Brain/process_message] Generating an llm response")
-        logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
+        # logger.debug(f"[Brain/process_message] Prompt: {self.memories}")
         response_content, usage, generation_time = self.model.generate(self.memories)
-        message.response_message = response_content.content
+        # message.response_message = response_content.content
         logger.info(f"[Brain/process_message] Received response from llm in {generation_time}s")
         logger.debug(f"[Brain/process_message] Received response from llm usage: {usage}")
 
         self._add_to_chat_history('assistant', response_content.content)
 
         # 4. saving to memory (optional)
-        await self._save_to_memory(message)
+        await self._save_to_memory(message, response_content.content)
 
         # 5. cleaning chat history (optional)
         if not self.config.use_memories:
@@ -142,7 +137,7 @@ class Brain(metaclass=Singleton):
             logger.info(f"empty context: {self.memories}")
 
         # 6. sending back to communication module
-        self.pubsub.publish(self.publish_to_topic, message)
+        return response_content.content
 
     def close(self):
         if not self.model:
@@ -158,9 +153,8 @@ class Brain(metaclass=Singleton):
             logger.error("[Brain/load_model] No settings in the model.")
             return False
 
-        is_loaded = self.model.load_model()
-        self.is_loaded_model = is_loaded
-        return is_loaded
+        self.is_loaded_model = self.model.load_model()
+        return self.is_loaded_model
 
     def load_persona(self) -> None:
         try:

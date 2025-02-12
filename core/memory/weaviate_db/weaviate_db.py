@@ -6,12 +6,12 @@ from .weaviate_utils import (bm_25_search,
                              near_text_search,
                              hybrid_search,
                              convert_response_to_mem_chain,
+                             delete_batch_by_uuid,
                              )
 
 from weaviate.classes.query import Sort
 from weaviate.connect import ConnectionParams
 from weaviate.exceptions import UnexpectedStatusCodeError
-
 
 similarity_search = {
     "hybrid": hybrid_search,
@@ -49,7 +49,8 @@ class Weaviate(WeaviateBase):
                 })
                 logger.info(f"[Weaviate/add_memories] Memory added successfully {uuid}")
         except UnexpectedStatusCodeError as e:
-            logger.error(f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters {e}")
+            logger.error(
+                f"[Weaviate/add_memories] Couldn't add data, most likely because there is memory in db with same parameters {e}")
             return False
         else:
             logger.info(f"[Weaviate/add_memories] Memory chain added successfully")
@@ -72,6 +73,46 @@ class Weaviate(WeaviateBase):
         logger.info(f"[Weaviate/get_chat_memory] Successfully got context for query {query}")
         return memory_chain
 
+    async def _fetch_last_n_memories(self, limit: int):
+        if not await self.is_alive():
+            logger.error(f"[Weaviate/_fetch_last_n_memories] Connection is closed. Cannot get chat memory")
+            return None
+
+        # returns last n messages, n counts for both the user and an AI
+        logger.debug(f"[Weaviate/_fetch_last_n_memories] fetching last {limit} messages")
+        try:
+            collection = self.client.collections.get(self.config.class_name)
+            return await collection.query.fetch_objects(
+                sort=Sort.by_property(name="datetime", ascending=False),
+                limit=limit,
+            )
+        except Exception as e:
+            logger.error(f"[Weaviate/_fetch_last_n_memories] Got an error {e}")
+            return None
+
+    async def delete_last_n_memories(self, limit: int) -> True:
+        if not await self.is_alive():
+            logger.error(f"[Weaviate/delete_last_n_memories] Connection is closed. Cannot get chat memory")
+            return None
+
+        # returns last n messages, n counts for both the user and an AI
+        logger.debug(f"[Weaviate/delete_last_n_memories] getting last {limit} messages")
+        try:
+            response = await self._fetch_last_n_memories(limit)
+            if not response:
+                raise Exception(f"troubles with getting last {limit} memories")
+        except Exception as e:
+            logger.info(f"[Weaviate/delete_last_n_memories] Got an error {e}")
+            return None
+
+        uuid_list = [str(o.uuid) for o in response.objects]
+        # should be wrapped in try except?
+        logger.info(f"[Weaviate/delete_last_n_memories] Deleting {len(uuid_list)} last memories")
+        delete_response = await delete_batch_by_uuid(self, uuid_list, dry_run=False, verbose=False)
+        was_successful = delete_response.successful == len(uuid_list)
+        logger.info(f"[Weaviate/delete_last_n_memories] Deleting worked? {was_successful}")
+        return was_successful
+
     async def get_chat_memory(self, limit_messages=20) -> Optional[MemoryChain]:
         if not await self.is_alive():
             logger.error(f"[Weaviate/get_chat_memory] Connection is closed. Cannot get chat memory")
@@ -80,11 +121,9 @@ class Weaviate(WeaviateBase):
         # returns last n messages, n counts for both the user and an AI
         logger.info(f"[Weaviate/get_chat_memory] getting chat history for {limit_messages} messages")
         try:
-            collection = self.client.collections.get(self.config.class_name)
-            response = await collection.query.fetch_objects(
-                sort=Sort.by_property(name="datetime", ascending=False),
-                limit=limit_messages,
-            )
+            response = await self._fetch_last_n_memories(limit_messages)
+            if not response:
+                raise Exception(f"troubles with getting last {limit_messages} memories")
         except Exception as e:
             logger.info(f"[Weaviate/get_chat_memory] Got an error {e}")
             return None

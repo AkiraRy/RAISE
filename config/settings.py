@@ -1,9 +1,11 @@
+import atexit
 import os
 from pathlib import Path
 import sys
 from dotenv import load_dotenv
 from logging.config import dictConfig
 import logging
+atexit.register(logging.shutdown)
 
 # TODO AT THE TOP OF THIS FILE ADD CHECKER FOR EVERY PATH< BUT BETTER DO IT IN THE INNIT
 load_dotenv()
@@ -11,6 +13,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent.parent
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_FILE = LOGS_DIR / 'infos.log'
+WEAVIATE_LOG_FILE = LOGS_DIR / 'weaviate.log'
+BRAIN_LOG_FILE = LOGS_DIR / 'brain.log'
 
 # Settings
 CONFIG_DIR = BASE_DIR / 'config'
@@ -56,18 +60,42 @@ LOGGING_CONFIG = {
             'class': "logging.StreamHandler",
             'formatter': "standard"
         },
-        "file": {
+        "file": {  # base logging, to a predefined file.
             'level': "INFO",
             'class': "logging.FileHandler",
             'filename': f"{LOGS_FILE}",
             'mode': "w",
             'formatter': "verbose"
         },
+        "weaviate_file": {
+            'level': "DEBUG",
+            'class': "logging.FileHandler",
+            'filename': f"{WEAVIATE_LOG_FILE}",
+            'mode': "a",
+            'formatter': "verbose"
+        },
+        "brain_file": {
+            'level': "DEBUG",
+            'class': "logging.FileHandler",
+            'filename': f"{BRAIN_LOG_FILE}",
+            'mode': "a",
+            'formatter': "verbose"
+        }
     },
     "loggers": {
         "programming": {
             'handlers': ['console'],
             "level": "DEBUG",
+            "propagate": False
+        },
+        "weaviate_logger": {  # New logger for the weaviate logs
+            'handlers': ['weaviate_file'],
+            "level": "INFO",
+            "propagate": False
+        },
+        "brain_logger": {  # New logger for the weaviate logs
+            'handlers': ['brain_file'],
+            "level": "INFO",
             "propagate": False
         },
     }

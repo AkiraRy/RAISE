@@ -65,7 +65,7 @@ class Model:
     def _generate_local(self, messages: List[dict]):
 
         formatted_prompt = self.format_prompt(messages)
-        logger.debug(f"[Model/_generate_local] formatted_prompt {formatted_prompt}")
+        # logger.debug(f"[Model/_generate_local] formatted_prompt {formatted_prompt}")
         logger.debug(f"[Model/_generate_local] settings {self.llm_settings}")
         stat_time = datetime.now()
         response = self.llm.create_completion(
@@ -87,7 +87,7 @@ class Model:
         # created = response['created']  # unix time
         choices = response['choices'][0]
         response_content = ResponseContent(
-            content=choices['text'],
+            content=choices['text'].removeprefix("assistant"),
             finish_reason=choices['finish_reason']
         )
         usage = Usage(**response['usage'])
@@ -97,7 +97,7 @@ class Model:
         return response_content, usage, generation_time
 
     def generate(self, messages: List[dict]):
-        logger.debug(f"[Model/generate] prompt for generation {messages}")
+        # logger.debug(f"[Model/generate] prompt for generation {messages}")
         if self.llm_settings.local:
             logger.info(f'[Model/generate] Proceeding generate text locally')
             return self._generate_local(messages)

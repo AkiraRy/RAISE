@@ -23,6 +23,9 @@ async def backup(weaviate_db: WeaviateBase):
     try:
         logger.info(f"[Weaviate_utils/backup] Backup with name '{backup_path}' will be created")
         data = await retrieve_all_objects(weaviate_db)
+        if data == -1:
+            raise Exception("Couldnt retrieve all files")
+
         with open(backup_path, 'w') as file:
             json.dump(data, file, indent=4)
     except Exception as e:
@@ -122,6 +125,7 @@ async def retrieve_all_objects(weaviate_db: WeaviateBase, limit=50):
         return all_objects
     except Exception as e:
         logger.error(f"[Weaviate_utils/retrieve_all_objects] got an unexpected error {e}")
+        return -1
 
 
 def convert_response_to_mem_chain(response, algo_name: Optional[str] = None) -> Optional[MemoryChain]:
@@ -220,6 +224,18 @@ async def delete_by_uuid(weaviate_db: WeaviateBase, uuid: str):
     collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
     return await collection.data.delete_by_id(
         uuid
+    )
+
+
+async def delete_batch_by_uuid(weaviate_db: WeaviateBase, uuids: list[str], dry_run=False, verbose=False):
+    if not uuids:
+        return
+
+    collection = weaviate_db.client.collections.get(weaviate_db.config.class_name)
+    return await collection.data.delete_many(
+        where=Filter.by_id().contains_any(uuids),
+        dry_run=dry_run,
+        verbose=verbose
     )
 
 

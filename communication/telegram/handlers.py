@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 
-from utils import TextMessage, TelegramMessage
+from utils import Message_server
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
 from telegram.constants import ChatAction, ParseMode
@@ -33,42 +33,33 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error(f'[error] USER({update.message.chat.id}) in {update.message.chat.type}: {context.error} from {update}')
 
 
-async def send_message_from_pubsub(message: TelegramMessage):
-    # We will get this object form PUBSUB
-    try:
-        content = message.response_message
-        if not content:
-            content = 'Something went wrong. No response was generated'
-        await message.update.message.reply_text(content)
-    except Exception as e:
-        logger.error(f"[Telegram/send_message_from_pubsub] Unexpectedly got an error {e}")
-
 
 async def handle_message(update: Update, context: CallbackContext):
-    pubsub = context.bot_data['pubsub']
-    topic = context.bot_data['publish_to']
     creator_name = context.bot_data['creator_username']
+    brain_helper = context.bot_data['brain']
 
     sender = update.message.from_user
     message_from_user = update.message.text
-    now = datetime.datetime.now()
     datetime_msg = datetime.datetime.now().astimezone()
     # add library or regex to filter out emojis
 
     logger.debug(f"[Telegram/handle_message] We got message from the user: {sender.id}, content: {message_from_user}")
-    telegram_message = TelegramMessage(
+    message_srv = Message_server(
         id=update.message.id,
         from_user=creator_name,
         datetime=datetime_msg,
-        text_content=TextMessage(message_from_user),
-        update=update,
-        context=context
+        text_content=message_from_user
     )
-    logger.info(f"[Telegram/handle_message] Sending processed message class to pubsub.")
-    pubsub.publish(topic, telegram_message)
 
-    # asyncio.create_task(context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING))
+    logger.info(f"[Telegram/handle_message] Sending message to brain handler")
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+
+    response = await brain_helper.generate_response(message_srv)
+    if response is None:
+        await update.message.reply_text("No generated response")
+        return
+
+    await update.message.reply_text(response)
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):

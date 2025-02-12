@@ -6,6 +6,8 @@ brain:
   persona_path: default_persona
   save_memories: true
   use_memories: true
+  server_host: localhost
+  server_port: 8001
 pubsub:
   input_message_topic: message_received
   processed_message_topic: message_preprocessed
@@ -29,3 +31,5 @@ weaviate:
   max_retries: 5
   retry_delay: 5
   sim_search_type: hybrid
+  server_host: localhost
+  server_port: 8000
