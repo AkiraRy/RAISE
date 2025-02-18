@@ -39,6 +39,8 @@ COGS_DIR = BASE_DIR / 'communication' / 'discord' / "cogs"
 
 # Plugin Related (temp?)
 AUDIO_DIR = ASSETS_DIR / "audio"
+PLUGIN_BASE_DIR = BASE_DIR / "plugins"
+
 
 LOGGING_CONFIG = {
     "version": 1,

@@ -9,5 +9,5 @@ from .settings import (BACKUP_DIR,
                        MODEL_DIR,
                        PROMPT_TEMPLATES_DIR,
                        PERSONA_DIR,
-                       COGS_DIR, AUDIO_DIR)
+                       COGS_DIR, AUDIO_DIR, PLUGIN_BASE_DIR)
 from .settings import logger, get_logger
