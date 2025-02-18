@@ -41,8 +41,20 @@ services:
     image: onerahmet/openai-whisper-asr-webservice:latest-gpu
     environment:
       ASR_MODEL: small
+      ASR_ENGINE: whisperx
     ports:
       - "9000:9000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+  voicevox_engine:
+    image: voicevox/voicevox_engine:nvidia-latest
+    ports:
+      - "50021:50021"
     deploy:
       resources:
         reservations:
