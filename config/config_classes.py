@@ -55,6 +55,7 @@ class WeaviateSettings(BaseSettings):
     server_host: str = "localhost"
     server_port: int = 8000
 
+
 @dataclass
 class PluginSettings:  # no idea currently how to make this work. in future fix
     plugin_name: str
@@ -113,6 +114,7 @@ class LLMSettings(BaseSettings):
         return values
 
 
+# deprecated
 class PubSubSettings(BaseSettings):
     input_message_topic: str
     processed_message_topic: str
@@ -134,7 +136,7 @@ class Config(BaseSettings):
     discord: Optional[DiscordSettings] = None
     weaviate: Optional[WeaviateSettings] = None
     llm: Optional[LLMSettings] = None
-    pubsub: Optional[PubSubSettings] = None
+    pubsub: Optional[PubSubSettings] = None # deprecated
     brain: Optional[BrainSettings] = None
     llm_type: str = None
 
@@ -171,7 +173,7 @@ class SettingsManager:
             if 'weaviate' in data:
                 self.config.weaviate = WeaviateSettings(**data['weaviate'])
             if 'pubsub' in data:
-                self.config.pubsub = PubSubSettings(**data['pubsub'])
+                self.config.pubsub = PubSubSettings(**data['pubsub']) # deprecated
             if 'brain' in data:
                 self.config.brain = BrainSettings(**data['brain'])
 

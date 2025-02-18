@@ -1,0 +1,1 @@
+from .voicevox_plugin import Voicevox, VVConfig

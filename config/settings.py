@@ -37,6 +37,9 @@ PROMPT_TEMPLATES_DIR = ASSETS_DIR / "prompt_templates"
 # Discord Related
 COGS_DIR = BASE_DIR / 'communication' / 'discord' / "cogs"
 
+# Plugin Related (temp?)
+AUDIO_DIR = ASSETS_DIR / "audio"
+
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
