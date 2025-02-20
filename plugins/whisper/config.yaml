@@ -1,0 +1,7 @@
+name: Whisper
+entry_point: "whisper_plugin.py"
+class_name: "Whisper"
+config_class_name: "WhisperConfig"
+host: localhost
+port: 9000
+save_to_file: False
