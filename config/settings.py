@@ -33,14 +33,14 @@ MODEL_DIR = ASSETS_DIR / 'models'
 PERSONA_DIR = ASSETS_DIR / 'persona_description'
 PROMPT_TEMPLATES_DIR = ASSETS_DIR / "prompt_templates"
 
-
 # Discord Related
 COGS_DIR = BASE_DIR / 'communication' / 'discord' / "cogs"
 
 # Plugin Related (temp?)
 AUDIO_DIR = ASSETS_DIR / "audio"
 PLUGIN_BASE_DIR = BASE_DIR / "plugins"
-
+VOICEVOX_FILE_NAME = "vv_temp.mp3"
+COMMUNICATION_FILE_NAME = "c_temp.mp3"  # used for temp audio files, that we get from communication module for whisper transcription
 
 LOGGING_CONFIG = {
     "version": 1,

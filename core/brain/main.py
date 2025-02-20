@@ -1,21 +1,11 @@
 import datetime
 from typing import Optional, List
 from jinja2 import Template
-from utils import Message_server
+from utils import Message_server, Singleton
 
 from . import logger, PERSONA_DIR, BrainSettings
 from ..memory import MemoryChain, Async_DB_Interface
 from .model_handler import Model
-
-
-# add context search
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 class Brain(metaclass=Singleton):
