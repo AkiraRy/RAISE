@@ -1,17 +1,23 @@
 import io
 import os
+from typing import Union
 
-from .. import Base
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+
 from httpx import AsyncClient  # HTTP requests
 from dataclasses import dataclass
 
-from config import AUDIO_DIR # temp?
+from config import AUDIO_DIR  # replace later from plugin manager.
 
+# from .. import Base
 # create config class for voicevox
 # probably xml/json is better?
 # i should also give path from root
+# add init for those values
 
 request_access = ["AUDIO_DIR", "AUDIO_FILE_NAME", ]  # not implemented
+
 
 @dataclass
 class VVConfig:
@@ -20,6 +26,10 @@ class VVConfig:
     host: str
     port: id
     save_to_file: bool
+    name: str
+    entry_point: str
+    class_name: str
+    config_class_name: str
 
 
 def save_to_file(path, data):
@@ -27,13 +37,31 @@ def save_to_file(path, data):
         f.write(data)
 
 
-class Voicevox(Base):
+class Voicevox:
     def __init__(self, logger, config: VVConfig):
         super().__init__()
         self.logger = logger
         self.config = config
         self.client = AsyncClient()
         self.base_url = f"http://{self.config.host}:{self.config.port}"
+        self.router = APIRouter()
+
+        @self.router.post("/tts")
+        async def generate_audio(text):
+            self.logger.debug(f"[Voicevox/post.generate_audio] Received text: {text}")
+            # preprocess text, before generating voice, or handle that before sending a request?
+            voice_data = await self.generate_voice(text)
+            if not voice_data:
+                return HTTPException(status_code=500, detail="No audio data was generated")
+
+            audio_buffer = io.BytesIO(voice_data)
+            audio_buffer.seek(0)
+
+            return StreamingResponse(audio_buffer, media_type="audio/wav")
+
+    def get_route(self):
+        """Returns the router for plugin manager to mount"""
+        return self.router
 
     async def get_style_ids(self):
         url = f"{self.base_url}/speakers"
@@ -59,7 +87,7 @@ class Voicevox(Base):
         if self.config.save_to_file:
             save_to_file(AUDIO_DIR, voice_bytes)
 
-        return voice_bytes # add more logging
+        return voice_bytes  # add more logging
 
     async def _generate_audio_query(self, text: str):
         url = f"{self.base_url}/audio_query"

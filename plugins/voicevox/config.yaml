@@ -1,0 +1,8 @@
+speaker_id: 89
+host: localhost
+port: 50021
+save_to_file: True
+entry_point: "voicevox_plugin.py"
+class_name: "Voicevox"
+config_class_name: "VVConfig"
+name: "VoiceVox"
