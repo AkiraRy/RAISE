@@ -40,17 +40,10 @@ class PluginManager(metaclass=Singleton):
         for plugin_name, plugin_path in self.plugins_metadata.items():
             raw_config = read_config(plugin_path, plugin_name)
 
-            entry_file = raw_config.get("entry_point")
-            class_name = raw_config.get("class_name")
-            config_class_name = raw_config.get("config_class_name", "Config")
+            entry_path, class_name, config_class_name = get_plugin_classes(raw_config, plugin_path, plugin_name)
 
-            if not entry_file or not class_name:
-                logger.warning(f"[PluginManager/load_plugins] Skipping {plugin_name}: Missing entry_point or class_name.")
-                continue
-
-            entry_path = os.path.join(plugin_path, entry_file)
-            if not os.path.exists(entry_path):
-                logger.warning(f"[PluginManager/load_plugins] Skipping {plugin_name}: Entry file '{entry_file}' not found.")
+            if not entry_path:
+                logger.warning(f"[PluginManager/load_plugins] Failed to load {plugin_name} plugin.")
                 continue
 
             self._load_plugin(plugin_name, entry_path, class_name, config_class_name, raw_config)
@@ -91,6 +84,23 @@ class PluginManager(metaclass=Singleton):
 
     def get_plugin(self, name):
         return self.plugins.get(name)
+
+
+def get_plugin_classes(raw_config, plugin_path, plugin_name):
+    entry_file = raw_config.get("entry_point")
+    class_name = raw_config.get("class_name")
+    config_class_name = raw_config.get("config_class_name", "Config")
+
+    if not entry_file or not class_name:
+        logger.warning(f"[get_plugin_classes] Skipping {plugin_name}: Missing entry_point or class_name.")
+        return None
+
+    entry_path = os.path.join(plugin_path, entry_file)
+    if not os.path.exists(entry_path):
+        logger.warning(f"[get_plugin_classes] Skipping {plugin_name}: Entry file '{entry_file}' not found.")
+        return None
+
+    return entry_path, class_name, config_class_name
 
 
 def discover_plugins():
