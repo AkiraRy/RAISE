@@ -27,6 +27,11 @@ class PluginManager(metaclass=Singleton):
         self.plugins = {}
         self.plugins_metadata = discover_plugins()
 
+    def new_plugins_discovered(self) -> dict | bool:
+        all_plugins = discover_plugins()
+        new_plugins_metadata = {k: all_plugins[k] for k in all_plugins if k not in self.plugins_metadata}
+        return False if not new_plugins_metadata else new_plugins_metadata
+
     def load_plugins(self):
         if not os.path.exists(PLUGIN_BASE_DIR):
             logger.warning(f"[PluginManager/load_plugins] Plugins directory '{PLUGIN_BASE_DIR}' not found.")
@@ -102,7 +107,6 @@ def discover_plugins():
         plugins_metadata[plugin_name] = plugin_path
 
     return plugins_metadata
-
 
 
 def read_config(plugin_path, plugin_name):
