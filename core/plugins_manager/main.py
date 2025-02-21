@@ -23,11 +23,12 @@ FILES = {
 class PluginManager(metaclass=Singleton):
     def __init__(self):  # config: PluginSettings
         # self.config = config ??
+        # self.logger = logger
         self.plugins = {}
 
     def load_plugins(self):
         if not os.path.exists(PLUGIN_BASE_DIR):
-            logger.warning(f"[PluginManager/load_plugins] Plugins directory '{PLUGIN_BASE_DIR}' not found.")
+            self.logger.warning(f"[PluginManager/load_plugins] Plugins directory '{PLUGIN_BASE_DIR}' not found.")
             return
 
         for plugin_name in os.listdir(PLUGIN_BASE_DIR):

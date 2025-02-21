@@ -15,6 +15,7 @@ LOGS_DIR = BASE_DIR / 'logs'
 LOGS_FILE = LOGS_DIR / 'infos.log'
 WEAVIATE_LOG_FILE = LOGS_DIR / 'weaviate.log'
 BRAIN_LOG_FILE = LOGS_DIR / 'brain.log'
+PLUGIN_MANAGER_LOG_FILE = LOGS_DIR / "pm.log"
 
 # Settings
 CONFIG_DIR = BASE_DIR / 'config'
@@ -65,7 +66,7 @@ LOGGING_CONFIG = {
             'class': "logging.StreamHandler",
             'formatter': "standard"
         },
-        "file": {  # base logging, to a predefined file.
+        "file": {  # not used anywhere?
             'level': "INFO",
             'class': "logging.FileHandler",
             'filename': f"{LOGS_FILE}",
@@ -83,6 +84,13 @@ LOGGING_CONFIG = {
             'level': "DEBUG",
             'class': "logging.FileHandler",
             'filename': f"{BRAIN_LOG_FILE}",
+            'mode': "a",
+            'formatter': "verbose"
+        },
+        "pm_file": {
+            'level': "DEBUG",
+            'class': "logging.FileHandler",
+            'filename': f"{PLUGIN_MANAGER_LOG_FILE}",
             'mode': "a",
             'formatter': "verbose"
         }
@@ -103,6 +111,11 @@ LOGGING_CONFIG = {
             "level": "INFO",
             "propagate": False
         },
+        "pm_logger": {  # New logger for the weaviate logs
+            'handlers': ['pm_file'],
+            "level": "INFO",
+            "propagate": False
+        }
     }
 }
 

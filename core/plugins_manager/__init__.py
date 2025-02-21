@@ -4,4 +4,6 @@ from config import (PluginSettings,
                     VOICEVOX_FILE_NAME,
                     COMMUNICATION_FILE_NAME,
                     ASSETS_DIR,
-                    logger)
+                    get_logger)
+
+logger = get_logger(name="pm_logger")

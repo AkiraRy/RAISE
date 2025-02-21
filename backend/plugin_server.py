@@ -2,15 +2,14 @@ import asyncio
 import os
 import signal
 from contextlib import asynccontextmanager
-import io
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 
 from core import PluginManager
 from config import SettingsManager, get_logger
 
-logger = get_logger() # change later to plugin manager logger
+logger = get_logger(name="pm_logger")
 
 settings_manager = SettingsManager().load_settings()
 plugin_manager = PluginManager()
