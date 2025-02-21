@@ -25,27 +25,15 @@ class PluginManager(metaclass=Singleton):
         # self.config = config ??
         # self.logger = logger
         self.plugins = {}
+        self.plugins_metadata = discover_plugins()
 
     def load_plugins(self):
         if not os.path.exists(PLUGIN_BASE_DIR):
-            self.logger.warning(f"[PluginManager/load_plugins] Plugins directory '{PLUGIN_BASE_DIR}' not found.")
+            logger.warning(f"[PluginManager/load_plugins] Plugins directory '{PLUGIN_BASE_DIR}' not found.")
             return
 
-        for plugin_name in os.listdir(PLUGIN_BASE_DIR):
-            plugin_path = os.path.join(PLUGIN_BASE_DIR, plugin_name)
-            if not os.path.isdir(plugin_path) or plugin_name.startswith("__"):
-                continue  # Skip non-directory items
-
-            config_path = os.path.join(plugin_path, "config.yaml")
-            if not os.path.exists(config_path):
-                config_path = os.path.join(plugin_path, "config.json")
-                if not os.path.exists(config_path):
-                    logger.warning(f"[PluginManager/load_plugins] Skipping {plugin_name}: No config file found.")
-                    continue
-
-            logger.debug(f"[PluginManager/load_plugins] Loading config: {config_path}\tfor plugin: {plugin_name}")
-            with open(config_path, "r") as f:
-                raw_config = yaml.safe_load(f) if config_path.endswith(".yaml") else json.load(f)
+        for plugin_name, plugin_path in self.plugins_metadata.items():
+            raw_config = read_config(plugin_path, plugin_name)
 
             entry_file = raw_config.get("entry_point")
             class_name = raw_config.get("class_name")
@@ -65,6 +53,11 @@ class PluginManager(metaclass=Singleton):
         return self.plugins
 
     def _load_plugin(self, plugin_name, entry_path, class_name, config_class_name, raw_config):
+        if self.plugins.get(plugin_name) is not None:
+            logger.debug(
+                f"[PluginManager/_load_plugins] Plugin {plugin_name} is already loaded.")
+            return
+
         logger.debug(f"[PluginManager/_load_plugins] Entering with those args: {plugin_name=}, {entry_path=}, {class_name=}, {config_class_name=}, {raw_config=}")
         module_name = f"{plugin_name}_plugin"
         spec = importlib.util.spec_from_file_location(module_name, entry_path)
@@ -93,3 +86,40 @@ class PluginManager(metaclass=Singleton):
 
     def get_plugin(self, name):
         return self.plugins.get(name)
+
+
+def discover_plugins():
+    if not os.path.exists(PLUGIN_BASE_DIR):
+        logger.warning(f"[discover_plugins] Plugins directory '{PLUGIN_BASE_DIR}' not found.")
+        return
+
+    plugins_metadata = {}
+    for plugin_name in os.listdir(PLUGIN_BASE_DIR):
+        plugin_path = os.path.join(PLUGIN_BASE_DIR, plugin_name)
+        if not os.path.isdir(plugin_path) or plugin_name.startswith("__"):
+            continue  # Skip non-directory items
+
+        plugins_metadata[plugin_name] = plugin_path
+
+    return plugins_metadata
+
+
+
+def read_config(plugin_path, plugin_name):
+    config_path = os.path.join(plugin_path, "config.yaml")
+    if not os.path.exists(config_path):
+        config_path = os.path.join(plugin_path, "config.json")
+        if not os.path.exists(config_path):
+            logger.warning(f"[read_config] Skipping {plugin_name}: No config file found.")
+            return False
+
+    logger.debug(f"[read_config] Loading config: {config_path}\tfor plugin: {plugin_name}")
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f) if config_path.endswith(".yaml") else json.load(f)
+
+
+# function to discover names of plugins in the plugin folder
+# - populate the metadata dictionary using that.
+# use that load plugins
+# add access to that function through fastapi.
+# make a helper function to discover if there is a new plugin? instead of doing that logic on server side
