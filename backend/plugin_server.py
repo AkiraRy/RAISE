@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from core import PluginManager
 from config import SettingsManager, get_logger
 
-logger = get_logger(name="pm_logger")
+logger = get_logger(name="programming")
 
 settings_manager = SettingsManager().load_settings()
 plugin_manager = PluginManager()
@@ -28,12 +28,40 @@ async def lifespan(app: FastAPI):
     logger.info(f'[plugin_server/lifespan] Plugin manager stopped.')
     # unload/close plugins. sent stop message to docker?
 
+
 app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse(url="/docs")
+
+
+# 2 ways of unloading routes.
+# first would be only unloading a route based on its name (multiple calls for multiple routes per plugin)
+# second unload each route that has a prefix of /{plugin_name}
+
+# second
+def unload_all_plugin_routes(plugin_name):
+    for i, r in enumerate(app.router.routes):
+        if r.path.startswith(f"/{plugin_name}"):
+            logger.info(f"[unload_all_plugin_routes] Unloading: {r}, plugin: {plugin_name}")
+            del app.router.routes[i]
+
+
+@app.post("/unload_plugin")
+async def unload_plugin(plugin_name: str):
+    try:
+        if plugin_name not in plugin_manager.plugins:
+            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} is not loaded.")
+
+        unload_all_plugin_routes(plugin_name)
+
+        return {"status": "success", "message": f"Plugin {plugin_name} unloaded."}
+
+    except Exception as e:
+        logger.error(f"[plugin_server/unload_plugin] Error unloading {plugin_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to unload plugin: {str(e)}")
 
 
 # noinspection PyAsyncCall

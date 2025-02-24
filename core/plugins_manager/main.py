@@ -1,6 +1,9 @@
+import gc
 import importlib
 import json
 import os
+import sys
+
 import yaml
 
 from utils import Singleton
@@ -23,14 +26,25 @@ FILES = {
 class PluginManager(metaclass=Singleton):
     def __init__(self):  # config: PluginSettings
         # self.config = config ??
-        # self.logger = logger
         self.plugins = {}
         self.plugins_metadata = discover_plugins()
 
     def unload_plugin(self, name):
-        # do i delete it from metadata?
-        # Probably not, good thing for caching purposes. Otherwise,  on each unload i would need to discover new plugins again
-        pass
+        if name not in self.plugins:
+            logger.warning(f"[PluginManager/unload_plugin] Plugin {name} is not loaded.")
+            return False
+
+        del self.plugins[name]
+
+        module_name = f"{name}_plugin"
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+            logger.info(f"[PluginManager/unload_plugin] Unloaded module {module_name} from sys.modules.")
+
+        gc.collect()
+
+        logger.info(f"[PluginManager/unload_plugin] Successfully unloaded plugin {name}.")
+        return True
 
     def _get_path_for_plugin(self, plugin_name): # add logging
         # first is metadata
@@ -108,6 +122,7 @@ class PluginManager(metaclass=Singleton):
         module_name = f"{plugin_name}_plugin"
         spec = importlib.util.spec_from_file_location(module_name, entry_path)
         module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
         spec.loader.exec_module(module)
 
         if not hasattr(module, class_name):
