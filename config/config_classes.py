@@ -56,10 +56,12 @@ class WeaviateSettings(BaseSettings):
     server_port: int = 8000
 
 
-@dataclass
-class PluginSettings:  # no idea currently how to make this work. in future fix
-    plugin_name: str
-    plugin_config: Dict[str, str] = field(default_factory=dict)
+class PluginSettings(BaseSettings):
+    allow_folder_access: bool = False
+    allow_write_access: bool = False
+    server_host: str = "localhost"
+    server_port: int = 8002
+    load_all_plugins: bool = True
 
 
 # noinspection PyNestedDecorators
@@ -136,9 +138,20 @@ class Config(BaseSettings):
     discord: Optional[DiscordSettings] = None
     weaviate: Optional[WeaviateSettings] = None
     llm: Optional[LLMSettings] = None
-    pubsub: Optional[PubSubSettings] = None # deprecated
+    pubsub: Optional[PubSubSettings] = None  # deprecated
     brain: Optional[BrainSettings] = None
+    plugin_manager: Optional[PluginSettings] = None
     llm_type: str = None
+
+
+config_classes = {
+    "telegram": TelegramSettings,
+    "discord": DiscordSettings,
+    "weaviate": WeaviateSettings,
+    "pubsub": PubSubSettings,
+    "brain": BrainSettings,
+    "plugin_manager": PluginSettings,
+}
 
 
 class SettingsManager:
@@ -166,20 +179,9 @@ class SettingsManager:
             with open(self.yaml_path, 'r') as f:
                 data = yaml.safe_load(f)
 
-            if 'telegram' in data:
-                self.config.telegram = TelegramSettings(**data['telegram'])
-            if 'discord' in data:
-                self.config.discord = DiscordSettings(**data['discord'])
-            if 'weaviate' in data:
-                self.config.weaviate = WeaviateSettings(**data['weaviate'])
-            if 'pubsub' in data:
-                self.config.pubsub = PubSubSettings(**data['pubsub']) # deprecated
-            if 'brain' in data:
-                self.config.brain = BrainSettings(**data['brain'])
-
-            # if 'plugins' in data:
-            #     for name, settings in data['plugins'].items():
-            #         self.config.plugins[name] = PluginSettings(plugin_name=name, plugin_config=settings)
+            for config_name, config_class in config_classes.items():
+                if config_name in data:
+                    setattr(self.config, config_name, config_class(**data[config_name]))
 
             self.config.llm_type = data.get('llm_type', 'default')
 
@@ -202,7 +204,7 @@ class SettingsManager:
             with open(self.yaml_path, 'r') as f:
                 data = yaml.safe_load(f)
 
-                component_loaders = {
+                component_loaders = { # update later
                     'telegram': lambda: TelegramSettings(**data['telegram']) if 'telegram' in data else None,
                     'discord': lambda: DiscordSettings(**data['discord']) if 'discord' in data else None,
                     'weaviate': lambda: WeaviateSettings(**data['weaviate']) if 'weaviate' in data else None,
@@ -227,7 +229,7 @@ class SettingsManager:
             raise
 
     def save_settings(self):
-        all_settings = {}
+        all_settings = {}  # fix this ugly nonsense
         if self.config.telegram:
             all_settings['telegram'] = self.config.telegram.dict()
         if self.config.discord:
@@ -238,8 +240,9 @@ class SettingsManager:
             all_settings['pubsub'] = self.config.pubsub.dict()
         if self.config.brain:
             all_settings['brain'] = self.config.brain.dict()
+        if self.config.plugin_manager:
+            all_settings['plugin_manager'] = self.config.plugin_manager.dict()
 
-        # all_settings['plugins'] = {name: asdict(plugin) for name, plugin in self.config.plugins.items()}
         all_settings['llm_type'] = self.config.llm_type
 
         try:
