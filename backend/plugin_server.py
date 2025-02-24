@@ -37,16 +37,15 @@ async def root():
     return RedirectResponse(url="/docs")
 
 
-# 2 ways of unloading routes.
-# first would be only unloading a route based on its name (multiple calls for multiple routes per plugin)
-# second unload each route that has a prefix of /{plugin_name}
-
-# second
 def unload_all_plugin_routes(plugin_name):
     for i, r in enumerate(app.router.routes):
         if r.path.startswith(f"/{plugin_name}"):
             logger.info(f"[unload_all_plugin_routes] Unloading: {r}, plugin: {plugin_name}")
-            del app.router.routes[i]
+
+
+def load_all_plugins():
+    for plugin_name, plugin in plugin_manager.load_plugins().items():
+        app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
 
 
 @app.post("/unload_plugin")
@@ -57,11 +56,34 @@ async def unload_plugin(plugin_name: str):
 
         unload_all_plugin_routes(plugin_name)
 
+        if not plugin_manager.unload_plugin(plugin_name):
+            raise HTTPException(status_code=500, detail=f"Couldn't unload {plugin_name} plugin.")
+
         return {"status": "success", "message": f"Plugin {plugin_name} unloaded."}
 
     except Exception as e:
         logger.error(f"[plugin_server/unload_plugin] Error unloading {plugin_name}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to unload plugin: {str(e)}")
+
+
+@app.post("/load_plugin")
+async def load_plugin(plugin_name: str):
+    try:
+        if plugin_name in plugin_manager.plugins:
+            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} is already loaded.")
+
+        if not plugin_manager.load_plugin(plugin_name):
+            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} couldnt be loaded.")
+
+        # Since i explicitly check if that plugin has been loaded in an if statement higher, than i dont need to check if returned values i non None?
+        plugin = plugin_manager.get_plugin(plugin_name)
+        app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
+
+        return {"status": "success", "message": f"Plugin {plugin_name} loaded."}
+
+    except Exception as e:
+        logger.error(f"[plugin_server/load_plugin] Error loading {plugin_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load plugin: {str(e)}")
 
 
 # noinspection PyAsyncCall
