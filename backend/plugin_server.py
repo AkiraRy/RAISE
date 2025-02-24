@@ -11,18 +11,15 @@ from config import SettingsManager, get_logger
 
 logger = get_logger(name="programming")
 
-settings_manager = SettingsManager().load_settings()
-plugin_manager = PluginManager()
+pm_config = SettingsManager().load_settings().config.plugin_manager
+plugin_manager = PluginManager(pm_config)
 
 
 # noinspection PyUnusedLocal,PyShadowingNames
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global plugin_manager
-    logger.info(f'[plugin_server/lifespan] Loading plugins.')
-    for plugin_name, plugin in plugin_manager.load_plugins().items():
-        app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
-
+    load_all_plugins()
     logger.info(f"[plugin_server/lifespan] Server is running")
     yield
     logger.info(f'[plugin_server/lifespan] Plugin manager stopped.')
@@ -44,8 +41,10 @@ def unload_all_plugin_routes(plugin_name):
 
 
 def load_all_plugins():
-    for plugin_name, plugin in plugin_manager.load_plugins().items():
-        app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
+    if pm_config.load_all_plugins:
+        for plugin_name, plugin in plugin_manager.load_plugins().items():
+            logger.info(f'[plugin_server/load_all_plugins] Loading plugins.')
+            app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
 
 
 @app.post("/unload_plugin")

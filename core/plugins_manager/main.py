@@ -24,8 +24,8 @@ FILES = {
 
 
 class PluginManager(metaclass=Singleton):
-    def __init__(self):  # config: PluginSettings
-        # self.config = config ??
+    def __init__(self, config: PluginSettings):
+        self.config = config
         self.plugins = {}
         self.plugins_metadata = discover_plugins()
 
