@@ -77,7 +77,11 @@ async def load_plugin(plugin_name: str):
 
         # Since i explicitly check if that plugin has been loaded in an if statement higher, than i dont need to check if returned values i non None?
         plugin = plugin_manager.get_plugin(plugin_name)
-        app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
+        try:
+            app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
+        except:
+            logger.warning(f"[plugin_server/load_plugin] couldnt add router, most likely this plugin was loaded before"
+                           f" restart this server to see changes")
 
         return {"status": "success", "message": f"Plugin {plugin_name} loaded."}
 
