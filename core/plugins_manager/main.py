@@ -20,8 +20,6 @@ FILES = {
     "COMMUNICATION_FILE_NAME": COMMUNICATION_FILE_NAME
 }
 
-# All allowed things for plugins to export
-
 
 class PluginManager(metaclass=Singleton):
     def __init__(self, config: PluginSettings):
@@ -142,9 +140,25 @@ class PluginManager(metaclass=Singleton):
         else:
             config = raw_config
 
-        self.plugins[plugin_name] = PluginClass(logger, config)
+        plugin = PluginClass(logger, config)
+        self.plugins[plugin_name] = plugin
+        self._initialize_plugin_perms(plugin)
+
         logger.info(f"[PluginManager/_load_plugins] Loaded plugin: {plugin_name}")
         return True
+
+    def _initialize_plugin_perms(self, plugin: BasePlugin):
+        print(self.config)
+        allowed_folders = FOLDERS if self.config.allow_folder_access else {}
+        allowed_files = FILES if self.config.allow_write_access else {}
+
+        plugin.perms = {
+            perm: allowed_folders.get(perm, allowed_files.get(perm, None))
+            for perm in plugin.required_perms
+        }
+        logger.debug(f"[PluginManager/_initialize_plugin_perms] Updated perms: {plugin.perms}")
+        logger.info(
+            f"[PluginManager/_initialize_plugin_perms] Set permissions for {plugin.__class__.__name__}: {plugin.perms}")
 
     def get_plugin(self, name):
         return self.plugins.get(name)

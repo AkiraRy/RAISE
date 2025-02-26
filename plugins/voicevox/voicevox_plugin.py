@@ -8,7 +8,7 @@ from utils import BasePlugin
 from config import AUDIO_DIR  # doing rn
 
 
-request_access = ["AUDIO_DIR", "AUDIO_FILE_NAME"]  # not implemented
+request_access = ["AUDIO_DIR", "VOICEVOX_FILE_NAME"]
 
 
 # make it save in this path?
