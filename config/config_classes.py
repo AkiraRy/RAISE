@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 from pathlib import Path
@@ -202,46 +203,42 @@ class SettingsManager:
 
         try:
             with open(self.yaml_path, 'r') as f:
-                data = yaml.safe_load(f)
+                data = yaml.safe_load(f) or {}
 
-                component_loaders = { # update later
-                    'telegram': lambda: TelegramSettings(**data['telegram']) if 'telegram' in data else None,
-                    'discord': lambda: DiscordSettings(**data['discord']) if 'discord' in data else None,
-                    'weaviate': lambda: WeaviateSettings(**data['weaviate']) if 'weaviate' in data else None,
-                    # 'plugins': lambda: {name: PluginSettings(plugin_name=name, plugin_config=settings)
-                    #                     for name, settings in data['plugins'].items()} if 'plugins' in data else None,
-                    'llm': lambda: self.load_llm_settings(data['llm_type']) if 'llm_type' in data else None
-                }
+            component_loaders = { # update later
+                'telegram': lambda: TelegramSettings(**data['telegram']) if 'telegram' in data else None,
+                'discord': lambda: DiscordSettings(**data['discord']) if 'discord' in data else None,
+                'weaviate': lambda: WeaviateSettings(**data['weaviate']) if 'weaviate' in data else None,
+                # 'plugins': lambda: {name: PluginSettings(plugin_name=name, plugin_config=settings)
+                #                     for name, settings in data['plugins'].items()} if 'plugins' in data else None,
+                'llm': lambda: self.load_llm_settings(data['llm_type']) if 'llm_type' in data else None
+            }
 
-                if component in component_loaders:
-                    result = component_loaders[component]()
-                    if result is None:
-                        logger.warning(f"[SettingsManager/load_single_module] Component '{component}' not found in settings.")
-                        return
+            if component == "llm":
+                if "llm_type" in data:
+                    return self.load_llm_settings(data["llm_type"])
+                logger.warning(f"[SettingsManager/load_single_module] 'llm_type' not found in settings.")
+                return None
 
-                    logger.info(f"[SettingsManager/load_single_module] Component '{component}' loaded successfully.")
+            if component in config_classes:
+                if component in data:
+                    result = config_classes[component](**data[component])
+                    logger.info(f"[SettingsManager/load_single_module] Loaded '{component}' successfully.")
                     return result
-                else:
-                    logger.error(f"[SettingsManager/load_single_module] Invalid component: '{component}'. Cannot load settings.")
-                    raise ValueError(f"Invalid component: '{component}'.")
+                logger.warning(f"[SettingsManager/load_single_module] Component '{component}' not found in settings.")
+                return None
+
+            logger.error(f"[SettingsManager/load_single_module] Invalid component '{component}'.")
+            raise ValueError(f"Invalid component: '{component}'.")
         except (FileNotFoundError, yaml.YAMLError) as e:
             logger.error(f"[SettingsManager/load_single_module] Error loading settings from {self.yaml_path}: {e}")
             raise
 
     def save_settings(self):
-        all_settings = {}  # fix this ugly nonsense
-        if self.config.telegram:
-            all_settings['telegram'] = self.config.telegram.dict()
-        if self.config.discord:
-            all_settings['discord'] = self.config.discord.dict()
-        if self.config.weaviate:
-            all_settings['weaviate'] = self.config.weaviate.dict()
-        if self.config.pubsub:
-            all_settings['pubsub'] = self.config.pubsub.dict()
-        if self.config.brain:
-            all_settings['brain'] = self.config.brain.dict()
-        if self.config.plugin_manager:
-            all_settings['plugin_manager'] = self.config.plugin_manager.dict()
+        all_settings = {
+            key: value.dict() for key, value in self.config.__dict__.items()
+            if value is not None and hasattr(value, "dict") and key != "llm"
+        }
 
         all_settings['llm_type'] = self.config.llm_type
 
