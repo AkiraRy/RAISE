@@ -148,7 +148,6 @@ class PluginManager(metaclass=Singleton):
         return True
 
     def _initialize_plugin_perms(self, plugin: BasePlugin):
-        print(self.config)
         allowed_folders = FOLDERS if self.config.allow_folder_access else {}
         allowed_files = FILES if self.config.allow_write_access else {}
 

@@ -106,6 +106,16 @@ async def shutdown_server():
         raise HTTPException(status_code=500, detail=f"Failed to shutdown server: {str(e)}")
 
 
+@app.get("/is_plugin_loaded")
+async def is_plugin_loaded(plugin_name: str):
+    if not plugin_manager.get_plugin(plugin_name):
+        logger.info(f"[plugin_server/is_plugin_loaded] Request info about {plugin_name} plugin, not loaded.")
+        raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} is not loaded.")
+
+    logger.info(f"[plugin_server/is_plugin_loaded] Request info about {plugin_name} plugin loaded")
+    return {"status": "success", "message": f"Plugin {plugin_name} is loaded."}
+
+
 @app.get("/is_alive")
 async def is_alive():
     try:
