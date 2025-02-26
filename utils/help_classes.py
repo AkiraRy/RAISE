@@ -6,6 +6,7 @@ from typing import Optional
 from datetime import datetime
 from telegram import Update
 from discord.message import Message as Msg
+import abc
 
 
 @dataclass
@@ -77,3 +78,15 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class BasePlugin(abc.ABC):
+    def __init__(self, required_perms: list):
+        self.required_perms: list = required_perms
+        self.perms: dict = {}
+
+    def get_router(self):
+        pass
+
+    def close(self):
+        pass

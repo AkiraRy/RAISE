@@ -44,7 +44,7 @@ def load_all_plugins():
     if pm_config.load_all_plugins:
         for plugin_name, plugin in plugin_manager.load_plugins().items():
             logger.info(f'[plugin_server/load_all_plugins] Loading plugins.')
-            app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
+            app.include_router(plugin.get_router(), prefix=f"/{plugin_name}")
 
 
 @app.post("/unload_plugin")
@@ -77,7 +77,7 @@ async def load_plugin(plugin_name: str):
         # Since i explicitly check if that plugin has been loaded in an if statement higher, than i dont need to check if returned values i non None?
         plugin = plugin_manager.get_plugin(plugin_name)
         try:
-            app.include_router(plugin.get_route(), prefix=f"/{plugin_name}")
+            app.include_router(plugin.get_router(), prefix=f"/{plugin_name}")
         except:
             logger.warning(f"[plugin_server/load_plugin] couldnt add router, most likely this plugin was loaded before"
                            f" restart this server to see changes")

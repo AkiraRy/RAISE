@@ -2,6 +2,7 @@ import io
 from dataclasses import dataclass
 from fastapi import APIRouter, UploadFile, File
 from httpx import AsyncClient, ReadTimeout  # HTTP requests
+from utils import BasePlugin
 
 
 @dataclass
@@ -15,9 +16,12 @@ class WhisperConfig:
     save_to_file: bool
 
 
-class Whisper:
+request_access = []
+
+
+class Whisper(BasePlugin):
     def __init__(self, logger, config):
-        super().__init__()
+        super().__init__(request_access)
         self.logger = logger
         self.config = config
         self.client = AsyncClient()
@@ -70,6 +74,6 @@ class Whisper:
         await self.client.aclose()
         return True
 
-    def get_route(self):
+    def get_router(self):
         """Returns the router for plugin manager to mount"""
         return self.router

@@ -1,32 +1,24 @@
 import io
-import os
-from typing import Union
-
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from httpx import AsyncClient  # HTTP requests
 from dataclasses import dataclass
-
-from config import AUDIO_DIR  # replace later from plugin manager.
-
-# from .. import Base
-# create config class for voicevox
-# probably xml/json is better?
-# i should also give path from root
-# add init for those values
-
-request_access = ["AUDIO_DIR", "AUDIO_FILE_NAME", ]  # not implemented
+from utils import BasePlugin
+from config import AUDIO_DIR  # doing rn
 
 
+request_access = ["AUDIO_DIR", "AUDIO_FILE_NAME"]  # not implemented
+
+
+# make it save in this path?
 @dataclass
 class VVConfig:
-    # make it save in this path?
     speaker_id: int
     host: str
     port: id
     save_to_file: bool
-    name: str
+    name: str # do i need that?
     entry_point: str
     class_name: str
     config_class_name: str
@@ -37,9 +29,9 @@ def save_to_file(path, data):
         f.write(data)
 
 
-class Voicevox:
+class Voicevox(BasePlugin):
     def __init__(self, logger, config: VVConfig):
-        super().__init__()
+        super().__init__(request_access)
         self.logger = logger
         self.config = config
         self.client = AsyncClient()
@@ -59,7 +51,7 @@ class Voicevox:
 
             return StreamingResponse(audio_buffer, media_type="audio/wav")
 
-    def get_route(self):
+    def get_router(self):
         """Returns the router for plugin manager to mount"""
         return self.router
 

@@ -6,7 +6,7 @@ import sys
 
 import yaml
 
-from utils import Singleton
+from utils import Singleton, BasePlugin
 from . import *
 
 FOLDERS = {
@@ -26,7 +26,7 @@ FILES = {
 class PluginManager(metaclass=Singleton):
     def __init__(self, config: PluginSettings):
         self.config = config
-        self.plugins = {}
+        self.plugins: dict[str, BasePlugin] = {}
         self.plugins_metadata = discover_plugins()
 
     def unload_plugin(self, name):
@@ -34,6 +34,7 @@ class PluginManager(metaclass=Singleton):
             logger.warning(f"[PluginManager/unload_plugin] Plugin {name} is not loaded.")
             return False
 
+        self.plugins[name].close()
         del self.plugins[name]
 
         module_name = f"{name}_plugin"
@@ -46,7 +47,7 @@ class PluginManager(metaclass=Singleton):
         logger.info(f"[PluginManager/unload_plugin] Successfully unloaded plugin {name}.")
         return True
 
-    def _get_path_for_plugin(self, plugin_name): # add logging
+    def _get_path_for_plugin(self, plugin_name):  # add logging
         # first is metadata
         plugin_path = self.plugins_metadata.get(plugin_name, None)
 
@@ -57,10 +58,9 @@ class PluginManager(metaclass=Singleton):
         new_plugins = self.discover_new_plugins()
 
         if not new_plugins:
-            return False  # couldnt discover plugin.
+            return False  # couldn't discover plugin.
 
         # check plugin in newly discovered plugins.
-
         plugin_path_in_discovered = new_plugins.get(plugin_name, None)
 
         if not plugin_path_in_discovered:
