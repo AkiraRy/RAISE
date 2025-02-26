@@ -51,7 +51,7 @@ class Whisper(BasePlugin):
         files = {'audio_file': b_data}
         try:
             self.logger.info(f'[Whisper/_transcribe_from_bytes] Sending a post request for audio transcription.')
-            response = await self.client.post(url, files=files, params=query_params)
+            response = await self.client.post(url, files=files, params=query_params, timeout=15)
             response.raise_for_status()
             self.logger.info(f'[Whisper/_transcribe_from_bytes] Audio transcription was generated successfully')
             return response.text
@@ -65,7 +65,7 @@ class Whisper(BasePlugin):
 
     async def _transcribe_from_path(self, path):
         self.logger.info(f'[Whisper/_transcribe_from_path] Transcribing an audio file from path.')
-        with open(path, 'rb') as file: # change to async file read later on
+        with open(path, 'rb') as file:  # change to async file read later on
             return await self._transcribe_from_bytes(file)
 
     async def close(self):

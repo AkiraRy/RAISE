@@ -5,13 +5,10 @@ from fastapi.responses import StreamingResponse
 from httpx import AsyncClient  # HTTP requests
 from dataclasses import dataclass
 from utils import BasePlugin
-from config import AUDIO_DIR  # doing rn
-
 
 request_access = ["AUDIO_DIR", "VOICEVOX_FILE_NAME"]
 
 
-# make it save in this path?
 @dataclass
 class VVConfig:
     speaker_id: int
@@ -103,8 +100,7 @@ class Voicevox(BasePlugin):
 
     async def _generate_synthesis(self, audio_query) -> bytes | bool:
         if not audio_query:
-            # log?
-            self.logger.error("temp, no audioquery")
+            self.logger.error("[Voicevox/_generate_synthesis] No audio query data was receied")
             return False
         url = f"{self.base_url}/synthesis"
         query_params = {"speaker": self.config.speaker_id}
