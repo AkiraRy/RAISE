@@ -25,7 +25,7 @@ class VVConfig:
 
 
 def save_to_file(path, data):
-    with open(f"{path}\\temp.mp3", "wb") as f:  # name of the file add to config
+    with open(path, "wb") as f:
         f.write(data)
 
 
@@ -71,15 +71,19 @@ class Voicevox(BasePlugin):
         # assume text is preprocessed before this function call
         audio_query_json = await self._generate_audio_query(text)
         voice_bytes = await self._generate_synthesis(audio_query_json)
+
         if not voice_bytes:
-            self.logger.error("temp, no voicebytes")
-            # log?
+            self.logger.error("[Voicevox/generate_voice] No voice data was received.")
             return False
 
-        if self.config.save_to_file:
-            save_to_file(AUDIO_DIR, voice_bytes)
+        audio_dir = self.perms.get(request_access[0])
+        file_name = self.perms.get(request_access[1])
 
-        return voice_bytes  # add more logging
+        if all([audio_dir, file_name, self.config.save_to_file]):
+            self.logger.info("[Voicevox/generate_voice] Saving to temporary file.")
+            save_to_file(f"{audio_dir}\\{file_name}", voice_bytes)
+
+        return voice_bytes
 
     async def _generate_audio_query(self, text: str):
         url = f"{self.base_url}/audio_query"
