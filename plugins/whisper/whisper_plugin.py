@@ -45,9 +45,9 @@ class Whisper(BasePlugin):
         else:
             raise NotImplemented()
 
-    async def _transcribe_from_bytes(self, b_data):
+    async def _transcribe_from_bytes(self, b_data): # add here param for language
         url = f"{self.base_url}/asr"
-        query_params = {"output": "txt", "language": "ja"}
+        query_params = {"output": "txt"}
         files = {'audio_file': b_data}
         try:
             self.logger.info(f'[Whisper/_transcribe_from_bytes] Sending a post request for audio transcription.')

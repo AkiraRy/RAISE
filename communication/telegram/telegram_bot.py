@@ -7,9 +7,9 @@ from telegram.ext import (Application,
                           TypeHandler,
                           )
 
-from .handlers import handle_message, error_handler, help_command, start_command, whitelist_user
+from .handlers import handle_message, error_handler, help_command, start_command, whitelist_user, handle_voice
 from . import BaseInterface, TelegramSettings, logger
-from core import BrainHelper
+from core import BrainHelper, PMHelper
 
 
 class TelegramInterface(BaseInterface):
@@ -17,12 +17,14 @@ class TelegramInterface(BaseInterface):
                  token,
                  config: TelegramSettings,
                  creator_username: str,
-                 brain: BrainHelper):
+                 brain: BrainHelper,
+                 plugin_manager: PMHelper):
 
         # config variables
         self.CREATOR_ID = config.creator_id
         self.CREATOR_USERNAME = creator_username
         self.brain = brain
+        self.plugin_manager = plugin_manager
         logger.info(f"[TelegramInterface/__init__] Building an Application")
         self.app: Application = Application.builder().token(token).build()
 
@@ -30,7 +32,8 @@ class TelegramInterface(BaseInterface):
         self.app.context_types.context.bot_data = {
             "creator_id": self.CREATOR_ID,
             'creator_username': self.CREATOR_USERNAME,
-            "brain": self.brain
+            "brain": self.brain,
+            "plugin_manager": self.plugin_manager
         }
 
         self.job_queue = self.app.job_queue
@@ -45,6 +48,7 @@ class TelegramInterface(BaseInterface):
             CommandHandler("start", start_command),
             CommandHandler("help", help_command),
             MessageHandler(filters.TEXT, handle_message),
+            MessageHandler(filters.VOICE, handle_voice),
         ])
         self.app.add_error_handler(error_handler)
 

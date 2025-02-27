@@ -6,6 +6,7 @@ from .brain.main import Brain, Model
 from .event_manager.async_eda import PubSub
 from .brain.brain_handler import BrainHelper
 from .plugins_manager.main import PluginManager
+from .plugins_manager.pm_helper import PMHelper
 # dont import here model. import it directly when needed using core.brain.model_handler
 import warnings
 warnings.filterwarnings("ignore", category=ResourceWarning)

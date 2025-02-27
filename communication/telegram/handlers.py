@@ -5,8 +5,9 @@ from utils import Message_server
 from telegram import Update, constants
 from telegram.ext import CallbackContext, ContextTypes, ApplicationHandlerStop
 from telegram.constants import ChatAction, ParseMode
-
+import re
 from . import logger
+import io
 
 
 async def whitelist_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -31,7 +32,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     # it is still kinda same update, but i have no idea why they changed it to object
     logger.error(f'[error] USER({update.message.chat.id}) in {update.message.chat.type}: {context.error} from {update}')
-
 
 
 async def handle_message(update: Update, context: CallbackContext):
@@ -62,9 +62,43 @@ async def handle_message(update: Update, context: CallbackContext):
     await update.message.reply_text(response)
 
 
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    raise NotImplemented
-
-
 async def handle_files(*args, **kwargs):
     raise NotImplemented
+
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # check for whisper connectivity.
+    plugin_manager = context.bot_data['plugin_manager']
+
+    voice_file = await context.bot.get_file(update.message.voice.file_id)
+
+    buffer = io.BytesIO()
+    await voice_file.download_to_memory(buffer)
+    buffer.seek(0)
+
+
+    try:
+        # check if connected first, do that tomorrow
+
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.RECORD_VOICE)
+        response = await plugin_manager.transcribe(buffer)
+    except requests.exceptions.ConnectionError:
+        print('whisper cannot transcribe')
+        return
+
+    print(f'the response {response}')
+
+    # Clearing the response
+    speech = re.sub('Kurisu', '', response.strip(), flags=re.IGNORECASE)
+    reply_text = f'<i>Heard: \"{speech}\"</i>'
+
+    # Get the ID of the message to reply to
+    reply_to_message_id = update.message.message_id
+
+    # Send the reply message as a reply to the specific message
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=reply_text,
+        parse_mode=ParseMode.HTML,
+        reply_to_message_id=reply_to_message_id
+    )
