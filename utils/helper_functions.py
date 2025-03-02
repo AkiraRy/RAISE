@@ -7,6 +7,13 @@ from translate import Translator
 import re
 
 
+def preprocess_non_jp_text(text):
+    if detect_japanese(text):
+        return text
+
+    return translate_text(text, "ja")
+
+
 def detect_japanese(text):
     jp_pattern = r'[\u3041-\u3096\u30A0-\u30FF\u3400-\u4DB5\u4E00-\u9FCB\uF900-\uFA6A]'
 
@@ -14,8 +21,8 @@ def detect_japanese(text):
 
 
 def translate_text(text, target_language):
-    provider = "google"
-    translator = Translator(provider=provider, from_lang="ja", to_lang=target_language)
+    provider = "mymemory"
+    translator = Translator(provider=provider, from_lang="en", to_lang=target_language)
     translation = translator.translate(text)
     return translation
 

@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 
 from core import PluginService
 from config import SettingsManager, get_logger
-from utils import STTPlugin, TTSPlugin
+from utils import STTPlugin, TTSPlugin, preprocess_non_jp_text
 
 logger = get_logger(name="programming")
 
@@ -50,20 +50,21 @@ async def generate_audio(text, name: str = "voicevox"):
     # looks for the plugin specified in name, defaults to first position
     matched_plugin: TTSPlugin = next((plugin for plugin_name, plugin in tts_plugins if plugin_name == name),
                                      tts_plugins[0][1] if tts_plugins else None)
-    logger.debug(f"[plugin_server/post(/tts).generate_audio] Using {matched_plugin.__name__} plugin")
+    logger.debug(f"[plugin_server/post(/tts).generate_audio] Using {matched_plugin.config.name} plugin")
 
     # preprocess text, before generating voice, or handle that before sending a request?
+    text = preprocess_non_jp_text(text)  # i will hope that it returns jp :happydays:
     voice_data = await matched_plugin.tts(text)
     if not voice_data:
         logger.error(
-            f"[plugin_server/post(/tts).generate_audio] Failed to generate speach using {matched_plugin.__name__} plugin, for '{text}'")
+            f"[plugin_server/post(/tts).generate_audio] Failed to generate speach using {matched_plugin.config.name} plugin, for '{text}'")
         return HTTPException(status_code=500, detail="No audio data was generated")
 
     audio_buffer = io.BytesIO(voice_data)
     audio_buffer.seek(0)
     logger.info(
-        f"[plugin_server/post(/tts).generate_audio] Successfully generate speach using {matched_plugin.__name__} plugin, for '{text}'")
-    return StreamingResponse(audio_buffer, media_type="audio/wav")
+        f"[plugin_server/post(/tts).generate_audio] Successfully generate speach using {matched_plugin.config.name} plugin, for '{text}'")
+    return StreamingResponse(audio_buffer, media_type="audio/ogg")
 
 
 @app.post("/transcribe")  # rename to stt?
@@ -77,12 +78,12 @@ async def transcribe_file(file: UploadFile = File(...), name: str = "whisper"):
     # looks for the plugin specified in name, defaults to first position
     matched_plugin: STTPlugin = next((plugin for plugin_name, plugin in stt_plugins if plugin_name == name),
                                      stt_plugins[0][1] if stt_plugins else None)
-    logger.debug(f"[plugin_server/post(/transcribe).transcribe_file] Using {matched_plugin.__name__} plugin")
+    logger.debug(f"[plugin_server/post(/transcribe).transcribe_file] Using {matched_plugin.config.name} plugin")
 
     audio_data = await file.read()
     transcription = await matched_plugin.stt(io.BytesIO(audio_data))
     logger.info(
-        f"[plugin_server/post(/transcribe).transcribe_file] Successfully transcribed file '{file.filename}' using {matched_plugin.__name__} plugin.")
+        f"[plugin_server/post(/transcribe).transcribe_file] Successfully transcribed file '{file.filename}' using {matched_plugin.config.name} plugin.")
 
     return {"transcription": transcription}
 

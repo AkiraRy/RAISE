@@ -21,6 +21,7 @@ class TelegramInterface(BaseInterface):
                  plugin_manager: PMHelper):
 
         # config variables
+        self.config = config
         self.CREATOR_ID = config.creator_id
         self.CREATOR_USERNAME = creator_username
         self.brain = brain
@@ -33,7 +34,9 @@ class TelegramInterface(BaseInterface):
             "creator_id": self.CREATOR_ID,
             'creator_username': self.CREATOR_USERNAME,
             "brain": self.brain,
-            "plugin_manager": self.plugin_manager
+            "plugin_manager": self.plugin_manager,
+            "answer_voice_messages": self.config.answer_voice_messages,
+            "generate_voice_messages": self.config.generate_voice,
         }
 
         self.job_queue = self.app.job_queue
@@ -56,8 +59,9 @@ class TelegramInterface(BaseInterface):
         logger.warning(f"[telegram_bot/stop] Not implemented on windows")
         raise NotImplemented()
 
-    def manage_event_loop(self): # doesnt need this since it is running on 1 thread only?
+    def manage_event_loop(self):
         """
+        deprecated, still in use because everything fails unless used in this manor :happydays:
         Creates a new event loop and runs the asynchronous tasks.
         This method should be called when using asyncio-based models.
         """
