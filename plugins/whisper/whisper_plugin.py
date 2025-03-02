@@ -2,7 +2,7 @@ import io
 from dataclasses import dataclass
 from fastapi import APIRouter, UploadFile, File
 from httpx import AsyncClient, ReadTimeout  # HTTP requests
-from utils import BasePlugin, PluginType
+from utils import BasePlugin, PluginType, STTPlugin
 
 
 @dataclass
@@ -19,7 +19,7 @@ class WhisperConfig:
 request_access = []
 
 
-class Whisper(BasePlugin):
+class Whisper(STTPlugin):
     def __init__(self, logger, config):
         super().__init__(PluginType.STT, request_access)
         self.logger = logger
@@ -35,7 +35,7 @@ class Whisper(BasePlugin):
             transcription = await self._transcribe_from_bytes(io.BytesIO(audio_data))
             return {"transcription": transcription}
 
-    async def transcribe(self, data):
+    async def stt(self, data):
         if isinstance(data, io.BytesIO):
             self.logger.info(f"[Whisper/transcribe] transcribing binary data")
             return await self._transcribe_from_bytes(data)
@@ -73,7 +73,3 @@ class Whisper(BasePlugin):
         # logic
         await self.client.aclose()
         return True
-
-    def get_router(self):
-        """Returns the router for plugin manager to mount"""
-        return self.router

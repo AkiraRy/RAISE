@@ -39,7 +39,7 @@ class Voicevox(BasePlugin):
         async def generate_audio(text):
             self.logger.debug(f"[Voicevox/post.generate_audio] Received text: {text}")
             # preprocess text, before generating voice, or handle that before sending a request?
-            voice_data = await self.generate_voice(text)
+            voice_data = await self.tts(text)
             if not voice_data:
                 return HTTPException(status_code=500, detail="No audio data was generated")
 
@@ -47,10 +47,6 @@ class Voicevox(BasePlugin):
             audio_buffer.seek(0)
 
             return StreamingResponse(audio_buffer, media_type="audio/wav")
-
-    def get_router(self):
-        """Returns the router for plugin manager to mount"""
-        return self.router
 
     async def get_style_ids(self):
         url = f"{self.base_url}/speakers"
@@ -64,7 +60,7 @@ class Voicevox(BasePlugin):
             self.logger.error(f"[Voicevox/get_style_ids] Exception: {e}")
             return False
 
-    async def generate_voice(self, text):
+    async def tts(self, text):
         # assume text is preprocessed before this function call
         audio_query_json = await self._generate_audio_query(text)
         voice_bytes = await self._generate_synthesis(audio_query_json)

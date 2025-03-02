@@ -93,8 +93,24 @@ class BasePlugin(abc.ABC):
         self.required_perms: list = required_perms
         self.perms: dict = {}
 
-    def get_router(self):
+    @abc.abstractmethod
+    def close(self):
         pass
 
-    def close(self):
+
+class TTSPlugin(BasePlugin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abc.abstractmethod
+    def tts(self, text):
+        pass
+
+
+class STTPlugin(BasePlugin):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @abc.abstractmethod
+    def stt(self, data):
         pass
