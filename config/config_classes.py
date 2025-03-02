@@ -36,6 +36,8 @@ class DiscordSettings(BaseSettings):
 
 class TelegramSettings(BaseSettings):
     creator_id: int = -1  # whitelist
+    answer_voice_messages: bool = False
+    generate_voice: bool = False
 
 
 class WeaviateSettings(BaseSettings):

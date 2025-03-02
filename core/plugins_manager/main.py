@@ -20,32 +20,19 @@ FILES = {
     "COMMUNICATION_FILE_NAME": COMMUNICATION_FILE_NAME
 }
 
-# - change the architecture behind the tts/stt in plugin manager
-# do i manage that at the server side or in this class
-# 2 functions, return tts/stt plugin
 
-
-class PluginManager(metaclass=Singleton):
+class PluginManager(metaclass=Singleton): # low level
     def __init__(self, config: PluginSettings):
         self.config = config
         self.plugins: dict[str, BasePlugin] = {}
         self.plugins_metadata = discover_plugins()
 
-    def get_tts_plugins(self):
-        return [plugin for name, plugin in self.plugins.items() if plugin.plugin_type == PluginType.TTS]
-
-    def get_sts_plugins(self):
-        return [plugin for name, plugin in self.plugins.items() if plugin.plugin_type == PluginType.STS]
-
-    def get_stt_plugins(self):
-        return [plugin for name, plugin in self.plugins.items() if plugin.plugin_type == PluginType.STT]
-
-    def unload_plugin(self, name):
+    async def unload_plugin(self, name):
         if name not in self.plugins:
             logger.warning(f"[PluginManager/unload_plugin] Plugin {name} is not loaded.")
             return False
 
-        self.plugins[name].close()
+        await self.plugins[name].close()
         del self.plugins[name]
 
         module_name = f"{name}_plugin"
@@ -123,7 +110,7 @@ class PluginManager(metaclass=Singleton):
 
         return self.plugins
 
-    def _load_plugin(self, plugin_name, entry_path, class_name, config_class_name, raw_config):
+    def _load_plugin(self, plugin_name, entry_path, class_name, config_class_name, raw_config) -> bool:
         if self.plugins.get(plugin_name) is not None:
             logger.debug(
                 f"[PluginManager/_load_plugins] Plugin {plugin_name} is already loaded.")
@@ -172,7 +159,7 @@ class PluginManager(metaclass=Singleton):
         logger.info(
             f"[PluginManager/_initialize_plugin_perms] Set permissions for {plugin.__class__.__name__}: {plugin.perms}")
 
-    def get_plugin(self, name):
+    def get_plugin(self, name) -> BasePlugin:
         return self.plugins.get(name)
 
 

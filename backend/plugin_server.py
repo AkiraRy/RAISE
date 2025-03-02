@@ -6,22 +6,28 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 
-from core import PluginManager
+from core import PluginService
 from config import SettingsManager, get_logger
+
 
 logger = get_logger(name="programming")
 
 pm_config = SettingsManager().load_settings().config.plugin_manager
-plugin_manager = PluginManager(pm_config)
+plugin_service = PluginService(pm_config)
+
+# have some scheme for voice generation? E.g. in which order to use plugins
 
 
 # noinspection PyUnusedLocal,PyShadowingNames
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global plugin_manager
-    load_all_plugins()
+    global plugin_service
+    plugin_service.load_all_plugins()
     logger.info(f"[plugin_server/lifespan] Server is running")
     yield
+    names = list(plugin_service.plugin_manager.plugins.keys())
+    for name in names:
+        await plugin_service.unload_plugin(name)
     logger.info(f'[plugin_server/lifespan] Plugin manager stopped.')
     # unload/close plugins. sent stop message to docker?
 
@@ -34,31 +40,15 @@ async def root():
     return RedirectResponse(url="/docs")
 
 
-def unload_all_plugin_routes(plugin_name):
-    for i, r in enumerate(app.router.routes):
-        if r.path.startswith(f"/{plugin_name}"):
-            logger.info(f"[unload_all_plugin_routes] Unloading: {r}, plugin: {plugin_name}")
-
-
-def load_all_plugins():
-    if pm_config.load_all_plugins:
-        for plugin_name, plugin in plugin_manager.load_plugins().items():
-            logger.info(f'[plugin_server/load_all_plugins] Loading plugins.')
-            app.include_router(plugin.get_router(), prefix=f"/{plugin_name}")
-
-
-@app.post("/unload_plugin")
+@app.post("/unload_plugin")  # REFACTOR
 async def unload_plugin(plugin_name: str):
     try:
-        if plugin_name not in plugin_manager.plugins:
-            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} is not loaded.")
+        status, status_code, message = await plugin_service.unload_plugin(plugin_name)
 
-        unload_all_plugin_routes(plugin_name)
+        if not status:
+            raise HTTPException(status_code=status_code, detail=message)
 
-        if not plugin_manager.unload_plugin(plugin_name):
-            raise HTTPException(status_code=500, detail=f"Couldn't unload {plugin_name} plugin.")
-
-        return {"status": "success", "message": f"Plugin {plugin_name} unloaded."}
+        return {"status": "success", "message": message}
 
     except Exception as e:
         logger.error(f"[plugin_server/unload_plugin] Error unloading {plugin_name}: {e}")
@@ -67,26 +57,13 @@ async def unload_plugin(plugin_name: str):
 
 @app.post("/load_plugin")
 async def load_plugin(plugin_name: str):
-    try:
-        if plugin_name in plugin_manager.plugins:
-            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} is already loaded.")
+    status, status_code, message = plugin_service.load_plugin(plugin_name)
 
-        if not plugin_manager.load_plugin(plugin_name):
-            raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} couldnt be loaded.")
+    if not status:
+        raise HTTPException(status_code=status_code, detail=message) # WWWWWWWWWW
 
-        # Since i explicitly check if that plugin has been loaded in an if statement higher, than i dont need to check if returned values i non None?
-        plugin = plugin_manager.get_plugin(plugin_name)
-        try:
-            app.include_router(plugin.get_router(), prefix=f"/{plugin_name}")
-        except:
-            logger.warning(f"[plugin_server/load_plugin] couldnt add router, most likely this plugin was loaded before"
-                           f" restart this server to see changes")
+    return {"status": "success", "message": message}
 
-        return {"status": "success", "message": f"Plugin {plugin_name} loaded."}
-
-    except Exception as e:
-        logger.error(f"[plugin_server/load_plugin] Error loading {plugin_name}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to load plugin: {str(e)}")
 
 
 # noinspection PyAsyncCall
@@ -108,7 +85,7 @@ async def shutdown_server():
 
 @app.get("/is_plugin_loaded")
 async def is_plugin_loaded(plugin_name: str):
-    if not plugin_manager.get_plugin(plugin_name):
+    if not plugin_service.plugin_manager.get_plugin(plugin_name):
         logger.info(f"[plugin_server/is_plugin_loaded] Request info about {plugin_name} plugin, not loaded.")
         raise HTTPException(status_code=404, detail=f"Plugin {plugin_name} is not loaded.")
 
