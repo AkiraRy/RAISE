@@ -2,7 +2,7 @@ import io
 from dataclasses import dataclass
 from fastapi import APIRouter, UploadFile, File
 from httpx import AsyncClient, ReadTimeout  # HTTP requests
-from utils import BasePlugin
+from utils import BasePlugin, PluginType
 
 
 @dataclass
@@ -21,7 +21,7 @@ request_access = []
 
 class Whisper(BasePlugin):
     def __init__(self, logger, config):
-        super().__init__(request_access)
+        super().__init__(PluginType.STT, request_access)
         self.logger = logger
         self.config = config
         self.client = AsyncClient()

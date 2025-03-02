@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 
 from httpx import AsyncClient  # HTTP requests
 from dataclasses import dataclass
-from utils import BasePlugin
+from utils import BasePlugin, PluginType
 
 request_access = ["AUDIO_DIR", "VOICEVOX_FILE_NAME"]
 
@@ -28,7 +28,7 @@ def save_to_file(path, data):
 
 class Voicevox(BasePlugin):
     def __init__(self, logger, config: VVConfig):
-        super().__init__(request_access)
+        super().__init__(PluginType.TTS, request_access)
         self.logger = logger
         self.config = config
         self.client = AsyncClient()

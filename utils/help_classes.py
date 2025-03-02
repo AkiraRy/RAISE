@@ -7,7 +7,7 @@ from datetime import datetime
 from telegram import Update
 from discord.message import Message as Msg
 import abc
-
+from enum import Enum
 
 @dataclass
 class TextMessage:
@@ -80,8 +80,16 @@ class Singleton(type):
         return cls._instances[cls]
 
 
+class PluginType(Enum):
+    TTS = 0
+    STT = 1
+    STS = 2
+    ELSE = 3
+
+
 class BasePlugin(abc.ABC):
-    def __init__(self, required_perms: list):
+    def __init__(self, plugin_type: PluginType, required_perms: list):
+        self.plugin_type = plugin_type
         self.required_perms: list = required_perms
         self.perms: dict = {}
 

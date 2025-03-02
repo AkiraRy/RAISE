@@ -6,7 +6,7 @@ import sys
 
 import yaml
 
-from utils import Singleton, BasePlugin
+from utils import Singleton, BasePlugin, PluginType
 from . import *
 
 FOLDERS = {
@@ -20,12 +20,25 @@ FILES = {
     "COMMUNICATION_FILE_NAME": COMMUNICATION_FILE_NAME
 }
 
+# - change the architecture behind the tts/stt in plugin manager
+# do i manage that at the server side or in this class
+# 2 functions, return tts/stt plugin
+
 
 class PluginManager(metaclass=Singleton):
     def __init__(self, config: PluginSettings):
         self.config = config
         self.plugins: dict[str, BasePlugin] = {}
         self.plugins_metadata = discover_plugins()
+
+    def get_tts_plugins(self):
+        return [plugin for name, plugin in self.plugins.items() if plugin.plugin_type == PluginType.TTS]
+
+    def get_sts_plugins(self):
+        return [plugin for name, plugin in self.plugins.items() if plugin.plugin_type == PluginType.STS]
+
+    def get_stt_plugins(self):
+        return [plugin for name, plugin in self.plugins.items() if plugin.plugin_type == PluginType.STT]
 
     def unload_plugin(self, name):
         if name not in self.plugins:
@@ -52,7 +65,7 @@ class PluginManager(metaclass=Singleton):
         if plugin_path:
             return plugin_path
 
-        # second one is from discover plugins
+        # second one is from discover_plugins
         new_plugins = self.discover_new_plugins()
 
         if not new_plugins:
