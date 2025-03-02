@@ -1,7 +1,3 @@
-import io
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-
 from httpx import AsyncClient  # HTTP requests
 from dataclasses import dataclass
 from utils import BasePlugin, PluginType
@@ -33,20 +29,6 @@ class Voicevox(BasePlugin):
         self.config = config
         self.client = AsyncClient()
         self.base_url = f"http://{self.config.host}:{self.config.port}"
-        self.router = APIRouter()
-
-        @self.router.post("/tts")
-        async def generate_audio(text):
-            self.logger.debug(f"[Voicevox/post.generate_audio] Received text: {text}")
-            # preprocess text, before generating voice, or handle that before sending a request?
-            voice_data = await self.tts(text)
-            if not voice_data:
-                return HTTPException(status_code=500, detail="No audio data was generated")
-
-            audio_buffer = io.BytesIO(voice_data)
-            audio_buffer.seek(0)
-
-            return StreamingResponse(audio_buffer, media_type="audio/wav")
 
     async def get_style_ids(self):
         url = f"{self.base_url}/speakers"

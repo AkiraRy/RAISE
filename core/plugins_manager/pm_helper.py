@@ -9,9 +9,9 @@ class PMHelper:
         self.base_url = base_url
         self.client = AsyncClient()
 
-    async def tts(self, text: str) -> bytes:
+    async def tts(self, text: str) -> bytes:  # this is wrong
         # returns true if loaded plugin successfully
-        url = f"{self.base_url}/voicevox/tts"
+        url = f"{self.base_url}/tts"
         query_params = {"text": text}
 
         try:
@@ -28,9 +28,9 @@ class PMHelper:
             logger.error(f"[PMHelper/tts] Exception: {e}")
             return False
 
-    async def transcribe(self, audio_data: bytearray) -> str:
+    async def transcribe(self, audio_data: bytearray) -> str:  # this is wrong
         # returns true if loaded plugin successfully
-        url = f"{self.base_url}/whisper/transcribe"
+        url = f"{self.base_url}/transcribe"
         files = {"file": audio_data}
 
         try:

@@ -7,7 +7,7 @@ class PluginService:
     def __init__(self, config: PluginSettings):
         self.plugin_manager = PluginManager(config)
         self.loaded_plugins = {
-            PluginType.STT: [],
+            PluginType.STT: [],  # all plugins of this type must have .transcribe
             PluginType.STS: [],
             PluginType.TTS: [],
             PluginType.ELSE: []
@@ -22,10 +22,9 @@ class PluginService:
     def get_stt_plugins(self) -> list[BasePlugin]:
         return self.loaded_plugins.get(PluginType.STT, [])
 
-    def load_all_plugins(self):  # REFACTOR
+    def load_all_plugins(self):
         if not self.plugin_manager.config.load_all_plugins:
             return
-        print("hi")
         logger.info(f'[PluginService/load_all_plugins] Loading plugins.')
         for plugin_name, plugin in self.plugin_manager.load_plugins().items():
             self._add_plugin(plugin.plugin_type, plugin_name, plugin)

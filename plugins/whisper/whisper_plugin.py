@@ -1,8 +1,7 @@
 import io
 from dataclasses import dataclass
-from fastapi import APIRouter, UploadFile, File
 from httpx import AsyncClient, ReadTimeout  # HTTP requests
-from utils import BasePlugin, PluginType, STTPlugin
+from utils import PluginType, STTPlugin
 
 
 @dataclass
@@ -26,14 +25,6 @@ class Whisper(STTPlugin):
         self.config = config
         self.client = AsyncClient()
         self.base_url = f"http://{self.config.host}:{self.config.port}"
-        self.router = APIRouter()
-
-        @self.router.post("/transcribe")
-        async def transcribe_file(file: UploadFile = File(...)):
-            self.logger.debug(f"[Whisper/post.transcribe_file] Received file: {file.filename}")
-            audio_data = await file.read()
-            transcription = await self._transcribe_from_bytes(io.BytesIO(audio_data))
-            return {"transcription": transcription}
 
     async def stt(self, data):
         if isinstance(data, io.BytesIO):
