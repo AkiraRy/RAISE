@@ -68,8 +68,6 @@ Here I will write my current progress and what I want to implement in the future
 ### Plugins
 | Plugin             | Status |
 |--------------------|--------|
-| whisper STT        | 🔴     |
-| voicevox voice TTS | 🔴     |
 | RVC STS            | 🔴     |
 
 # Acknowledgement

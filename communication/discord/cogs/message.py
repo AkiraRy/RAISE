@@ -26,7 +26,7 @@ class MessageCog(commands.Cog):
         logger.info(f"[MessageCog/_get_response] Sending message to brain handler")
         return await self.bot.brain_helper.generate_response(message_srv)
 
-    async def _handle_text_message(self, message: discord.Message) -> None:
+    async def _handle_text_message(self, message: discord.Message, transcribed_message: str = None) -> None:
         sender_id = message.author.id
         msg_content = message.content
         datetime_msg = datetime.datetime.now().astimezone()
@@ -36,7 +36,12 @@ class MessageCog(commands.Cog):
 
         logger.info(f"[MessageCog/handle_message] Sending message to brain handler")
         await message.channel.typing()
-        response = await self._get_response(mssg_id=message.id, creator_name=self.bot.creator_username, datetime_msg=datetime_msg, message_from_user=msg_content)
+        response = await self._get_response(
+            mssg_id=message.id,
+            creator_name=self.bot.creator_username,
+            datetime_msg=datetime_msg,
+            message_from_user=transcribed_message or msg_content
+        )
 
         if response is None:  # add debug here
             await message.channel.send(f"No Generated Response")
@@ -66,7 +71,26 @@ class MessageCog(commands.Cog):
         await msg.delete()
 
     async def _handle_message_with_files(self, message: discord.Message) -> None:
-        pass
+        """
+        Currently it will only process first attachment, and if it is a native discord voice message. Not just message with a voice file
+        :param message:
+        :return:
+        """
+        attachment = message.attachments[0]
+        if not attachment.is_voice_message():
+            return
+        response = await self._transcribe(attachment)
+        await message.reply(f"*Heard \"{response}\"*")
+
+        if not self.bot.config.answer_voice_messages:
+            return
+        return await self._handle_text_message(message, response)
+
+    async def _transcribe(self, attachment):
+        voice_buffer = io.BytesIO()
+        await attachment.save(voice_buffer)
+        voice_buffer.seek(0)
+        return await self.bot.plugin_manager.transcribe(voice_buffer)
 
     @commands.Cog.listener(name="on_message")  # this is also for file :despair:
     async def handle_message(self, message: discord.Message) -> None:
