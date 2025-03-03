@@ -2,7 +2,7 @@ import asyncio
 import os
 from enum import Enum
 from config import SettingsManager, logger
-from core import BrainHelper, WeaviateHelper
+from core import BrainHelper, WeaviateHelper, PMHelper
 from communication import TelegramInterface, BaseInterface, DiscordInterface
 from utils import start_server_handler, terminate_process  # add if checker, if those endpoints exists make a helper function in utils
 import argparse
@@ -60,18 +60,21 @@ async def discord():
     settings_manager = SettingsManager().load_settings()
     weaviate_base_url = f'http://{settings_manager.config.weaviate.server_host}:{settings_manager.config.weaviate.server_port}'
     brain_base_url = f'http://{settings_manager.config.brain.server_host}:{settings_manager.config.brain.server_port}'
+    plugin_manager_base_url = f"http://{settings_manager.config.plugin_manager.server_host}:{settings_manager.config.plugin_manager.server_port}"
 
     # Modules
     discord_settings = settings_manager.config.discord
     brain_helper = BrainHelper(brain_base_url)
     memory_helper = WeaviateHelper(weaviate_base_url)
+    plugin_manager_helper = PMHelper(plugin_manager_base_url)
 
     # Communication
     ds_interface = DiscordInterface(
         token=ds_token,
         config=discord_settings,
         creator_username=settings_manager.config.brain.creator_name,
-        brain=brain_helper
+        brain=brain_helper,
+        plugin_manager=plugin_manager_helper
     )
 
     ai = AIAssistant(settings_manager, ds_interface, brain_helper, memory_helper)
@@ -95,17 +98,20 @@ async def telegram():
     settings_manager = SettingsManager().load_settings()
     weaviate_base_url = f'http://{settings_manager.config.weaviate.server_host}:{settings_manager.config.weaviate.server_port}'  # add to config
     brain_base_url = f'http://{settings_manager.config.brain.server_host}:{settings_manager.config.brain.server_port}'
+    plugin_manager_base_url = f"http://{settings_manager.config.plugin_manager.server_host}:{settings_manager.config.plugin_manager.server_port}"
 
     # Modules
     telegram_settings = settings_manager.config.telegram
     brain_helper = BrainHelper(brain_base_url)
     memory_helper = WeaviateHelper(weaviate_base_url)
+    plugin_manager_helper = PMHelper(plugin_manager_base_url)
 
     tg_interface = TelegramInterface(
         token=telegram_token,
         config=telegram_settings,
         creator_username=settings_manager.config.brain.creator_name,
-        brain=brain_helper
+        brain=brain_helper,
+        plugin_manager=plugin_manager_helper
     )
 
     ai = AIAssistant(settings_manager, tg_interface, brain_helper, memory_helper)
@@ -129,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--platform",
         choices=["d", "t", "discord", "telegram"],
-        default="telegram",
+        default="discord",
         help="Specify the communication module to use. Use 'discord' or 'd' for Discord, 'telegram' or 't' for Telegram. "
              "Default is 'telegram'."
     )
@@ -141,18 +147,18 @@ if __name__ == "__main__":
     except ValueError as e:
         print(e)
         exit(1)
-
-    try:
-        process_server_weaviate, process_id = start_server_handler("backend.weaviate_server:app", 8000) # use config here
-    except Exception as e:
-        logger.error(f"Error starting server_handler: {e}")
-        exit(1)
-
-    try:
-        process_server_brain, process_id = start_server_handler("backend.brain_server:app", 8001)
-    except Exception as e:
-        logger.error(f"Error starting brain_server: {e}")
-        exit(1)
+    #
+    # try:
+    #     process_server_weaviate, process_id = start_server_handler("backend.weaviate_server:app", 8000) # use config here
+    # except Exception as e:
+    #     logger.error(f"Error starting server_handler: {e}")
+    #     exit(1)
+    #
+    # try:
+    #     process_server_brain, process_id = start_server_handler("backend.brain_server:app", 8001)
+    # except Exception as e:
+    #     logger.error(f"Error starting brain_server: {e}")
+    #     exit(1)
 
     try:
         if communication_module == Platform.DISCORD:
@@ -166,5 +172,5 @@ if __name__ == "__main__":
     except asyncio.exceptions.CancelledError:
         pass
 
-    terminate_process(process_server_weaviate)
-    terminate_process(process_server_brain)
+    # terminate_process(process_server_weaviate)
+    # terminate_process(process_server_brain)

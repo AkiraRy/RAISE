@@ -3,7 +3,7 @@ from . import BaseInterface, logger, DiscordSettings
 from .discord_bot import RaiseBot
 import discord
 from discord.ext import commands
-from core import BrainHelper
+from core import BrainHelper, PMHelper
 
 
 class DiscordInterface(BaseInterface):
@@ -11,7 +11,8 @@ class DiscordInterface(BaseInterface):
                  token,
                  config: DiscordSettings,
                  creator_username: str,
-                 brain: BrainHelper
+                 brain: BrainHelper,
+                 plugin_manager: PMHelper
                  ):
         self.token = token
         intents = discord.Intents.all()
@@ -19,7 +20,9 @@ class DiscordInterface(BaseInterface):
                             intents=intents,
                             config=config,
                             creator_username=creator_username,
-                            brain=brain)
+                            brain=brain,
+                            plugin_manager=plugin_manager
+                            )
 
     async def initialize(self):
         await self.bot.load_cogs()

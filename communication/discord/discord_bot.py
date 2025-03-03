@@ -7,7 +7,7 @@ import discord
 from . import logger, DiscordSettings, COGS_DIR
 from discord.ext import commands
 from .cogs import cogs
-from core import BrainHelper
+from core import BrainHelper, PMHelper
 
 
 class RaiseBot(commands.Bot):
@@ -15,13 +15,15 @@ class RaiseBot(commands.Bot):
                  config: DiscordSettings,
                  creator_username: str,
                  intents,
-                 brain: BrainHelper
+                 brain: BrainHelper,
+                 plugin_manager: PMHelper
                  ):
 
         super().__init__(command_prefix=command_prefix, intents=intents)
         self.config = config
         self.creator_username = creator_username
         self.brain_helper = brain
+        self.plugin_manager = plugin_manager
 
     async def load_cogs(self):
         for cog in cogs:

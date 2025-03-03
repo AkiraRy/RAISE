@@ -32,6 +32,8 @@ class BaseSettings(BaseModel):
 class DiscordSettings(BaseSettings):
     bot_chat: int = -1  # Bot will only use dedicated chat for conversation
     creator_id: int = -1
+    answer_voice_messages: bool = False
+    generate_voice: bool = False
 
 
 class TelegramSettings(BaseSettings):
