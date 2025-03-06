@@ -124,7 +124,7 @@ async def get_context(query: str):
     logger.info(f"[weaviate_server/get_context] get request. Requesting context for user query {query}")
     memory_chain = await weaviate_db.get_context(query)
     logger.debug(f"get context show memory chain: {memory_chain}")
-    if not memory_chain.memories:
+    if not memory_chain or memory_chain.memories:
         logger.info(f"[weaviate_server/get_context] get request. Received no context.")
         return {"context": []}  # No similar messages found
     logger.info(f"[weaviate_server/get_context] get request. Successfully received context.")
