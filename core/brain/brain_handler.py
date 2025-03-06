@@ -3,6 +3,31 @@ from utils import Message_server
 from config import logger
 
 
+class BrainHelperDummy:
+    async def generate_response(self, message: Message_server) -> str:
+        try:
+            logger.info(f'[BrainHelperDummy/generate_response] Sending a post request for response generation')
+            response = "Dummy Response"
+            logger.debug(f"[BrainHelperDummy/generate_response]  response: {response}")
+            return response
+        except Exception as e:
+            logger.error(f"[BrainHelperDummy/generate_response] Exception: {e}")
+            return None
+
+    async def _shutdown_server(self) -> bool:
+        try:
+            logger.info(f"[BrainHelperDummy/_shutdown_server] Sending post request to shutdown weaviate server")
+            logger.info(
+                    f"[BrainHelperDummy/_shutdown_server] Successfully shutdown weaviate server")
+            return True
+        except Exception as e:
+            logger.error(f"[BrainHelperDummy/_shutdown_server] Exception: {e}")
+            return False
+
+    async def close(self):
+        return True
+
+
 class BrainHelper:
     def __init__(self, base_url: str):
         self.base_url = base_url
