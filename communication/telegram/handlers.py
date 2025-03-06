@@ -63,8 +63,15 @@ async def handle_message(update: Update, context: CallbackContext):
         # possible debug msg?
         return
 
+    await _send_voice(context, response, plugin_manager, chat_id)
+
+
+async def _send_voice(context: ContextTypes.DEFAULT_TYPE, response, plugin_manager, chat_id):
     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.RECORD_VOICE)
-    voice_bytes = await _generated_voice(plugin_manager, response)
+    voice_bytes = await _generated_voice(plugin_manager, response)  # what f genius
+    if not voice_bytes:
+        logger.warning(f"[Telegram/_send_voice], no voice data was generated")
+        return
     await context.bot.send_voice(chat_id=chat_id, voice=voice_bytes)
 
 

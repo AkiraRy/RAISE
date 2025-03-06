@@ -65,6 +65,9 @@ class MessageCog(commands.Cog):
         # after that delete that message
         msg = await message.channel.send(content=f"-# generating voice。。。", )
         voice_bytes = await self.bot.plugin_manager.tts(text)
+        if not voice_bytes:
+            logger.warning(f"[MessageCog/_send_voice], no voice data was generated")
+            return
         voice_buffer = io.BytesIO(voice_bytes)
         voice_buffer.seek(0)
         await message.channel.send(file=discord.File(voice_buffer, filename="voice.ogg"))
